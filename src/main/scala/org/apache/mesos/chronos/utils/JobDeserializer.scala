@@ -2,6 +2,7 @@ package org.apache.mesos.chronos.utils
 
 import java.util.regex.Pattern
 
+
 import org.apache.mesos.chronos.scheduler.config.SchedulerConfiguration
 import org.apache.mesos.chronos.scheduler.jobs._
 import org.apache.mesos.chronos.scheduler.jobs.constraints._
@@ -12,6 +13,8 @@ import org.joda.time.Period
 
 import scala.collection.JavaConversions._
 import scala.util.Try
+
+case class RequiredFieldMissingException(message: String) extends Exception(message)
 
 object JobDeserializer {
   var config: SchedulerConfiguration = _
@@ -24,12 +27,25 @@ object JobDeserializer {
 class JobDeserializer extends JsonDeserializer[BaseJob] {
 
   def deserialize(jsonParser: JsonParser, ctxt: DeserializationContext): BaseJob = {
-    val codec = jsonParser.getCodec
 
+    val codec = jsonParser.getCodec
     val node = codec.readTree[JsonNode](jsonParser)
 
-    val name = node.get("name").asText
-    val command = node.get("command").asText
+    val fieldFromNode = getFieldAsText(node, _: String)
+    val name = fieldFromNode("name")
+    val command = fieldFromNode("command")
+
+    val requiredFields = List("name", "comamand").zip(List(name, command))
+    val missingFields = requiredFields.filter(_._2 == None)
+
+    val missingFieldNames = missingFields.map(_._1).mkString(",")
+    if (!missingFieldNames.isEmpty) {
+        throw new RequiredFieldMissingException(message=s"Missing required fields: ${missingFieldNames}")
+    }
+
+    val nameValue = name.get
+    val commandValue = command.get
+
     val shell =
       if (node.has("shell") && node.get("shell") != null) node.get("shell").asBoolean
       else true
@@ -220,7 +236,7 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         parentList += parent.asText
       }
       new DependencyBasedJob(parents = parentList.toSet,
-        name = name, command = command, epsilon = epsilon, successCount = successCount, errorCount = errorCount,
+        name = nameValue, command = commandValue, epsilon = epsilon, successCount = successCount, errorCount = errorCount,
         executor = executor, executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner,
         ownerName = ownerName, description = description, lastError = lastError, lastSuccess = lastSuccess,
         async = async, cpus = cpus, disk = disk, mem = mem, disabled = disabled,
@@ -230,7 +246,7 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         constraints = constraints)
     } else if (node.has("schedule")) {
       val scheduleTimeZone = if (node.has("scheduleTimeZone")) node.get("scheduleTimeZone").asText else ""
-      new ScheduleBasedJob(node.get("schedule").asText, name = name, command = command,
+      new ScheduleBasedJob(node.get("schedule").asText, name = nameValue, command = commandValue,
         epsilon = epsilon, successCount = successCount, errorCount = errorCount, executor = executor,
         executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner, ownerName = ownerName,
         description = description, lastError = lastError, lastSuccess = lastSuccess, async = async,
@@ -241,7 +257,7 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         dataProcessingJobType = dataProcessingJobType, constraints = constraints)
     } else {
       /* schedule now */
-      new ScheduleBasedJob("R1//PT24H", name = name, command = command, epsilon = epsilon, successCount = successCount,
+      new ScheduleBasedJob("R1//PT24H", name = nameValue, command = commandValue, epsilon = epsilon, successCount = successCount,
         errorCount = errorCount, executor = executor, executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner,
         ownerName = ownerName, description = description, lastError = lastError, lastSuccess = lastSuccess,
         async = async, cpus = cpus, disk = disk, mem = mem, disabled = disabled,
@@ -250,5 +266,9 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         arguments = arguments, softError = softError, dataProcessingJobType = dataProcessingJobType,
         constraints = constraints)
     }
+  }
+
+  def getFieldAsText(node: JsonNode, field: String): Option[String] = {
+    Option(node.get(field)).map(_.asText)
   }
 }

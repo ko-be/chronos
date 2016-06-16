@@ -44,13 +44,16 @@ class ChronosRestModule extends ServletModule {
   }
 
   protected override def configureServlets() {
+
     bind(classOf[ObjectMapper])
       .annotatedWith(Names.named("restMapper"))
       .toInstance(new ObjectMapper())
 
+
     bind(classOf[PingServlet]).in(Scopes.SINGLETON)
     bind(classOf[MetricsServlet]).in(Scopes.SINGLETON)
     bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
+    bind(classOf[RequiredFieldMissingExceptionMapper]).in(Scopes.SINGLETON)
     bind(classOf[ConstraintViolationExceptionMapper]).in(Scopes.SINGLETON)
 
     serve(pingUrl).`with`(classOf[PingServlet])
@@ -59,6 +62,7 @@ class ChronosRestModule extends ServletModule {
     serve(guiceContainerUrl).`with`(classOf[GuiceContainer])
 
     bind(classOf[Iso8601JobResource]).in(Scopes.SINGLETON)
+    bind(classOf[CronJobResource]).in(Scopes.SINGLETON)
     bind(classOf[DependentJobResource]).in(Scopes.SINGLETON)
     bind(classOf[JobManagementResource]).in(Scopes.SINGLETON)
     bind(classOf[TaskManagementResource]).in(Scopes.SINGLETON)
