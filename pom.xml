@@ -14,6 +14,9 @@
   <properties>
     <encoding>UTF-8</encoding>
     <assets.dir>${basedir}/src/main/resources/assets</assets.dir>
+    <maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+    <!-- avoiding maven bug where timestamp is not available to resource filtering -->
+    <build.timestamp>${maven.build.timestamp}</build.timestamp>
 
     <!-- language versions -->
     <java.abi>1.7</java.abi>
@@ -269,6 +272,11 @@
       <resource>
         <targetPath>assets</targetPath>
         <directory>src/main/resources/assets/app</directory>
+      </resource>
+      <resource>
+          <targetPath>deb</targetPath>
+          <directory>src/deb</directory>
+          <filtering>true</filtering>
       </resource>
     </resources>
     <pluginManagement>
