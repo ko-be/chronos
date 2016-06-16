@@ -2,6 +2,7 @@ branches:
   only:
     - master
     - /^v[0-9.]+$/
+    - /^u\/tobyc\//
 sudo: false
 language: scala
 addons:
@@ -19,10 +20,10 @@ cache:
     - $HOME/.m2/repository
 deploy:
     - provider: bintray
-      file: "targe/classes/deb/bintray.json" # pulling out of target as variables get interp'ed by maven
+      file: "target/classes/deb/bintray.json" # pulling out of target as variables get interp'ed by maven
       user: yelptravis
       key:
-      secure: "RQewsXLalmlweQmEl6Opx418JihTDqEGLmfApwY4JCbRxb43aWswKBBak5hO4a3t4NF7egu0ds/dD6doNEt8iv4bo2dIpovYqKM6uxMvPTrv9ME7h5YVadJrkE91UvPqDSLTObRIuoo8JVmoOKEshQhtV8iz9cKVgJt2bf54aAwMpBOpVzLhslM6oTPFrc5atNO5X7sdz81pFJHdaR8TiMd1EABkhPs/01IOgTD649co2mlgYvq7hgNZcjAgNk4OVH5XOrhaFqFnlXFK457redPXmdjxMrS4sfo0/G1swp1zJaEUU85WWke2TOcniqt9tDp+p2eL1a9FvtXBNBLrh7kN61khz6LN3ibi+L0T1XA8Mz9H3IvPaMdqb4ESnvO6v8skEek5NLNSKXkoar9WWscAYvS3Qf1E6ixbx4XaJlmpthnetSJY7pDJ7EbiW8XDyYUwSkt0pFAbHtFK1IC/J5HJVQ3KMPXFGmXXT5i2+eZ3j1VUEh+mRc7jznKkYsbBJ1flPytGRQvkPMr0eMoAqvaul77u6oDr36umRyYA9dJs8UeHW7oQ1++1sEdktfvxKQBEY+WLTRKJHemFvsoLrIXEu9EfzTVioQw0QwzeswOg7GjU/uUHTEHBUrwFEhjgWSSI6Mg5gw5pVfkBE83Be/RbE7/8st+ky6VNaX/gKOk="
+        secure: "m1H04AKg1C1Al4/Z+hCcyi4ULfVxT1NeSMoOpH7gZ5d4ZwwtFV9hshj/v/cnR2dZJLSoCMq88GNTMffNqNHE5jgnLs4+1kM8xzl+ZiD4Gt21UG4WnvUy+vJ7xKkYqlNiG2cNvv6MPGv1an0EkFUuP5podViuKBWgyWKCr9SQBAIMJQEXjnW3ifR00dzr+HTe4ayHJAtkMzlPiSdSzkYxw5yJP265Tt+Ov4M9FgkH4LU3aJHQzZ6kt2/DULw/iXy7A2N2JM9RGTp1cDjLLXiw1bAbB65b1gsHPa/swGKp5IafOwl8VzXKwIlKODDv5f5V0tcX/0eUzJ3tJ6dHYzBjnLJiWQD2gTgSid0HbPVsD9VI9NBsdImrIJK6blcS7/zJYxpAOA6Vcbn55QWV1AkYCid+t9yb8RI/bHkP0Q2K2r97bHlGTkpbIysvmEf+349TJgMAyOpimoWp7kJ6P+hDPVUtGUjUiWyaK8l4SUUZy7lHVa9rHA9JIbOUvqNDt4FBiUfG/r1GrzD1SSMQBNmY3qo4qOt3BsOGf4uvl5OeclXBVW5HFt6Seti8t9E885yfjEA0xNxDLlLoMAW9uWQf/nMgNFtD3L7l+/m7uitMYWfmra5t7nfa07CguN2wClYx7CppZN0j2QpOLLkjT7QbzsEhGBs6EHCgeBx1DmPyokM="
       on:
-        tags: true
-        repo: Yelp/paasta
+        all_branches: true
+        repo: Yelp/chronos
