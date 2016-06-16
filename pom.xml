@@ -14,7 +14,7 @@
   <properties>
     <encoding>UTF-8</encoding>
     <assets.dir>${basedir}/src/main/resources/assets</assets.dir>
-    <maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+    <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
     <!-- avoiding maven bug where timestamp is not available to resource filtering -->
     <build.timestamp>${maven.build.timestamp}</build.timestamp>
 
