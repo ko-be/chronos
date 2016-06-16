@@ -35,7 +35,7 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
     val name = fieldFromNode("name")
     val command = fieldFromNode("command")
 
-    val requiredFields = List("name", "comamand").zip(List(name, command))
+    val requiredFields = List("name", "command").zip(List(name, command))
     val missingFields = requiredFields.filter(_._2 == None)
 
     val missingFieldNames = missingFields.map(_._1).mkString(",")
