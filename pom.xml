@@ -488,6 +488,64 @@
           </execution>
         </executions>
       </plugin>
+      <plugin>
+          <artifactId>jdeb</artifactId>
+          <groupId>org.vafer</groupId>
+          <version>1.5</version>
+          <executions>
+              <execution>
+                  <phase>package</phase>
+                  <goals>
+                      <goal>jdeb</goal>
+                  </goals>
+                  <configuration>
+                      <dataSet>
+                          <data>
+                              <src>${project.build.directory}/${project.build.finalName}.jar</src>
+                              <dst>/opt/chronos/${project.build.finalName}.jar</dst>
+                              <type>file</type>
+                          </data>
+                          <data>
+                              <src>${basedir}/src/deb/chronos.init</src>
+                              <dst>/etc/init.d/chronos</dst>
+                              <type>file</type>
+                              <mapper>
+                                  <type>perm</type>
+                                  <filemode>755</filemode>
+                              </mapper>
+                          </data>
+                          <data>
+                              <src>${basedir}/src/deb/chronos.bash</src>
+                              <dst>/opt/chronos/bin/chronos</dst>
+                              <type>file</type>
+                              <mapper>
+                                  <type>perm</type>
+                                  <filemode>755</filemode>
+                              </mapper>
+                          </data>
+                          <data>
+                              <src>${basedir}/src/deb/chronos.default</src>
+                              <dst>/etc/default/chronos</dst>
+                              <type>file</type>
+                              <mapper>
+                                  <type>perm</type>
+                                  <filemode>644</filemode>
+                              </mapper>
+                          </data>
+                          <data>
+                              <src>${basedir}/src/deb/chronos.logrotate</src>
+                              <dst>/etc/logrotate.d/chronos</dst>
+                              <type>file</type>
+                              <mapper>
+                                  <type>perm</type>
+                                  <filemode>644</filemode>
+                              </mapper>
+                          </data>
+                      </dataSet>
+                  </configuration>
+              </execution>
+          </executions>
+      </plugin>
     </plugins>
   </build>
   <profiles>
