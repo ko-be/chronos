@@ -11,6 +11,10 @@
     <maven>3.0</maven>
   </prerequisites>
 
+  <scm>
+    <developerConnection>scm:git:git@github.com:Yelp/chronos.git</developerConnection>
+  </scm>
+
   <properties>
     <encoding>UTF-8</encoding>
     <assets.dir>${basedir}/src/main/resources/assets</assets.dir>
@@ -553,6 +557,14 @@
                   </configuration>
               </execution>
           </executions>
+      </plugin>
+      <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-release-plugin</artifactId>
+          <version>2.5.3</version>
+          <configuration>
+              <tagNameFormat>v@{project.version}</tagNameFormat>
+          </configuration>
       </plugin>
     </plugins>
   </build>
