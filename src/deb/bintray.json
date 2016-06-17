@@ -5,8 +5,8 @@
         "subject": "yelp",
         "desc": "Chronos is a replacement for cron. It is a distributed and fault-tolerant scheduler that runs on top of Apache Mesos that can be used for job orchestration.",
         "website_url": "https://mesos.github.io/chronos/",
-        "issue_tracker_url": "https://github.com/mesos/mesos/issues",
-        "vcs_url": "https://github.com/mesos/chronos.git",
+        "issue_tracker_url": "https://github.com/Yelp/mesos/issues",
+        "vcs_url": "https://github.com/Yelp/chronos.git",
         "github_use_tag_release_notes": true,
         "github_release_notes_file": "RELEASE.md",
         "licenses": ["Apache-2.0"],
@@ -27,7 +27,7 @@
 
     "files":
         [
-        {"includePattern": "target/(.*.deb)", "uploadPattern": "$1", "matrixParams": { "deb_distribution": "trusty", "deb_component": "main", "deb_architecture": "amd64"} }
+        {"includePattern": "target/(.*.deb)", "uploadPattern": "$1", "matrixParams": { "deb_distribution": "lucid,trusty", "deb_component": "main", "deb_architecture": "amd64"} }
         ],
     "publish": true
 }
