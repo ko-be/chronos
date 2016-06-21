@@ -2,9 +2,11 @@
 #
 # Maven is still the recommended route for building chronos.
 #
+
 itest_%:
-	mkdir dist
-	mvn package
+	[ -d dist ] || mkdir dist
+	# maven command may be mvn or mvn3 depending on distro, if one fails try the other
+	mvn3 package || mvn package
 	cp target/*.deb dist/
 
 clean:
