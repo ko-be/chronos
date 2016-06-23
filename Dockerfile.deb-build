@@ -1,6 +1,6 @@
 FROM ubuntu:14.04
 #FROM docker-dev.yelpcorp.com/trusty_yelp
-MAINTAINER Rob Johnson <robj@yelp.com>
+MAINTAINER Toby Cole <tobyc@yelp.com>
 
 RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list && \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
