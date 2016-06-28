@@ -34,3 +34,4 @@ MASTER="$(cat /etc/mesos/zk)"
 
 # Use $OPTS to add other settings not handled by init script
 #OPTS="--log_config /etc/chronos/logging.properties"
+

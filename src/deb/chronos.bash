@@ -63,3 +63,4 @@ echo -e "Launch Chronos"
 CMD="java $JAVA_OPTS org.apache.mesos.chronos.scheduler.Main $EXTRA_OPTS $@"
 echo -e "cmd: $CMD"
 exec $CMD
+
