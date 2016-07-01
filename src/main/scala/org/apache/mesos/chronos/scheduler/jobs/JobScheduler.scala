@@ -268,6 +268,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       jobsObserver.apply(JobFinished(job, taskStatus, attempt))
 
       val newJob = getNewSuccessfulJob(job)
+      log.info(s"Marking job ${jobOption.get.name} with success. Last success ${newJob.lastSuccess}")
       replaceJob(job, newJob)
       processDependencies(jobName, taskDate)
 
@@ -321,6 +322,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   }
 
   private def getNewSuccessfulJob(job: BaseJob): BaseJob = {
+    log.info(s"Marking job {job.name} as success")
     val newJob = job match {
       case job: ScheduleBasedJob =>
         job.copy(successCount = job.successCount + 1,
@@ -346,7 +348,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   private def processDependencies(jobName: String, taskDate: Option[DateTime]) {
     val dependents = jobGraph.getExecutableChildren(jobName)
     if (dependents.nonEmpty) {
-      log.fine("%s has dependents: %s .".format(jobName, dependents.mkString(",")))
+      log.info("%s has dependents: %s .".format(jobName, dependents.mkString(",")))
       dependents.foreach {
         //TODO(FL): Ensure that the job for the given x exists. Lock.
         x =>
@@ -359,11 +361,11 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
             taskManager.enqueue(TaskUtils.getTaskId(dependentJob,
               date), dependentJob.highPriority)
 
-            log.fine("Enqueued depedent job." + x)
+            log.info("Enqueued depedent job." + x)
           }
       }
     } else {
-      log.fine("%s does not have any ready dependents.".format(jobName))
+      log.info("%s does not have any ready dependents.".format(jobName))
     }
   }
 
@@ -391,7 +393,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
           }
 
           if (hasAttemptsLeft && (job.lastError.length == 0 || hadRecentSuccess)) {
-            log.warning("Retrying job: %s, attempt: %d".format(jobName, attempt))
+            log.info("Retrying job: %s, attempt: %d".format(jobName, attempt))
             /* Schedule the retry up to 60 seconds in the future */
             val delayDuration = new Duration(failureRetryDelay)
             val newTaskId = TaskUtils.getTaskId(job, DateTime.now(DateTimeZone.UTC)
@@ -488,6 +490,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
         log.info("Size of streams: %d".format(streams.size))
         streams = iteration(dateSupplier(), streams)
       }
+      log.info(s"Scheduler sleeping for ${scheduleHorizon.toStandardDuration.getMillis}ms")
       Thread.sleep(scheduleHorizon.toStandardDuration.getMillis)
       //TODO(FL): This can be inaccurate if the horizon >= 1D on daylight savings day and when leap seconds are introduced.
     }
@@ -661,7 +664,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       stream
     } else {
       val encapsulatedJob = taskOption.get.job
-      log.info("Scheduling:" + taskOption.get.job.name)
+      log.info("Scheduling: " + taskOption.get.job.name)
       taskManager.scheduleDelayedTask(taskOption.get, taskManager.getMillisUntilExecution(taskOption.get.due), persist = true)
       /*TODO(FL): This needs some refactoring. Ideally, the task should only be persisted once it has been submitted
                   to chronos, however if we were to do this with the current design, there could be missed tasks if
