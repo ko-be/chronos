@@ -528,7 +528,7 @@
                           </data>
                           <data>
                               <src>${basedir}/src/deb/chronos.bash</src>
-                              <dst>/opt/chronos/bin/chronos</dst>
+                              <dst>/usr/bin/chronos</dst>
                               <type>file</type>
                               <mapper>
                                   <type>perm</type>
