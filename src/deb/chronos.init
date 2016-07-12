@@ -35,7 +35,7 @@ MESOS_HOME=/opt/mesos
 
 . /etc/default/chronos
 
-DAEMON="${CHRONOS_HOME}/bin/chronos"
+DAEMON="chronos"
 if [ "$(id -u)" -ne "0" ]; then
   echo "you must be root to start ${DESC}"
   exit 1
