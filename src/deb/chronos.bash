@@ -5,23 +5,52 @@
 
 me=$(readlink -n -f $0)
 bin=$(dirname $me)
+conf_dir=/etc/chronos/conf
+conf_file=/etc/default/chronos
 #process=$(basename $me)
 
-args=()
-  [[ ! -f /etc/default/chronos ]]        || . /etc/default/chronos
-  [[ ! ${ULIMIT:-} ]]    || ulimit $ULIMIT
-  [[ ! ${ZK_PATH:-} ]]   || args+=( --zk_path $ZK_PATH )
-  [[ ! ${ZK_HOSTS:-} ]]  || args+=( --zk_hosts $ZK_HOSTS )
-  [[ ! ${MASTER:-} ]]    || args+=( --master $MASTER )
-  [[ ! ${HOSTNAME:-} ]]  || args+=( --hostname $HOSTNAME )
-  [[ ! ${PORT:-} ]]      || args+=( --http_port $PORT )
-  [[ ! ${USER-} ]]       || args+=( --user $USER )
-  [[ ! ${CPU-} ]]        || args+=( --mesos_task_cpu $CPU )
-  [[ ! ${MEM-} ]]        || args+=( --mesos_task_mem $MEM )
-  [[ ! ${DISK-} ]]       || args+=( --mesos_task_disk $DISK )
-  [[ ! ${ROLE-} ]]       || args+=( --mesos_role $ROLE )
-  [[ ! ${FW_NAME-} ]]    || args+=( --mesos_framework_name $FW_NAME )
-  [[ ! ${OPTS-} ]]       || args+=( ${OPTS} )
+function element_in {
+  local e
+  for e in "${@:2}"; do [[ "$e" == "$1" ]] && return 0; done
+  return 1
+}
+
+function load_config { 
+    args=()
+      [[ ! -f $conf_file ]]        || . $conf_file
+      [[ ! ${ULIMIT:-} ]]    || ulimit $ULIMIT
+      [[ ! ${ZK_PATH:-} ]]   || args+=( --zk_path $ZK_PATH )
+      [[ ! ${ZK_HOSTS:-} ]]  || args+=( --zk_hosts $ZK_HOSTS )
+      [[ ! ${MASTER:-} ]]    || args+=( --master $MASTER )
+      [[ ! ${HOSTNAME:-} ]]  || args+=( --hostname $HOSTNAME )
+      [[ ! ${PORT:-} ]]      || args+=( --http_port $PORT )
+      [[ ! ${USER-} ]]       || args+=( --user $USER )
+      [[ ! ${CPU-} ]]        || args+=( --mesos_task_cpu $CPU )
+      [[ ! ${MEM-} ]]        || args+=( --mesos_task_mem $MEM )
+      [[ ! ${DISK-} ]]       || args+=( --mesos_task_disk $DISK )
+      [[ ! ${ROLE-} ]]       || args+=( --mesos_role $ROLE )
+      [[ ! ${FW_NAME-} ]]    || args+=( --mesos_framework_name $FW_NAME )
+      [[ ! ${OPTS-} ]]       || args+=( ${OPTS} )
+
+    # Get configuration from config directory files
+    if [[ -d $conf_dir ]]
+    then
+      while read -u 9 -r -d '' path
+      do
+        local name="${path#./}"
+        if ! element_in "--${name#'?'}" "$@"
+        then
+          case "$name" in
+            '?'*) args+=( "--${name#'?'}" ) ;;
+            *)    args+=( "--$name" "$(< "$conf_dir/$name")" ) ;;
+          esac
+        fi
+      done 9< <(cd "$conf_dir" && find . -type f -not -name '.*' -print0)
+    fi
+}
+
+load_config
+
 EXTRA_OPTS="${args[@]}"
 
 echo "chronos home: ${CHRONOS_HOME}"
