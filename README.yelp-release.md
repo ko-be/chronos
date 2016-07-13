@@ -1,9 +1,10 @@
 # Releasing Chronos at Yelp
 
 ## tl;dr
-* Run `mvn release:prepare`, `mvn release:clean`
+* run `make release`, which in turn runs `mvn release:prepare release:perform` in a docker container
 * Versions in pom.xml get updated, commited and new tag is pushed to github
 * Travis runs maven on tag, pushes deb to bintray
+* Also mirrored internally for jenkins build
 
 ## jdeb
 
