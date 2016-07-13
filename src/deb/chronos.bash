@@ -7,7 +7,9 @@ me=$(readlink -n -f $0)
 bin=$(dirname $me)
 conf_dir=/etc/chronos/conf
 conf_file=/etc/default/chronos
-#process=$(basename $me)
+
+CHRONOS_HOME=${CHRONOS_HOME:-/opt/chronos}
+
 
 function element_in {
   local e
@@ -54,13 +56,7 @@ load_config
 EXTRA_OPTS="${args[@]}"
 
 echo "chronos home: ${CHRONOS_HOME}"
-echo "mesos home: ${MESOS_HOME}"
 chronos_jar=$(find ${CHRONOS_HOME} -name "chronos-*.jar" | grep -v sources | head -n1)
-mesos_jar=$(find ${MESOS_HOME} -name "mesos-*.jar" | grep -v sources | head -n1)
-
-#libmesos_file=$(find ${MESOS_HOME} -name "libmesos.dylib" -or -name "libmesos.so" | head -n1)
-#echo "mesos lib: ${libmesos_file}"
-export MESOS_NATIVE_JAVA_LIBRARY="${MESOS_LIB}"
 
 ##- JAVA OPTIONS ==============================================================
 HEAP=${HEAP:-1024M}
@@ -75,7 +71,7 @@ echo "==> PERMGEN memory used: $PERMGEN"
 JAVA_OPTS="$JAVA_OPTS -XX:PermSize=$PERMGEN -XX:MaxPermSize=$PERMGEN"
 #
 #- CLASSPATH ------------------------------------------------------------------
-JAVA_OPTS="$JAVA_OPTS -Djava.library.path=${JAVA_LIBPATH:-/usr/lib/} -cp $chronos_jar:$mesos_jar"
+JAVA_OPTS="$JAVA_OPTS -Djava.library.path=${JAVA_LIBPATH:-/usr/local/lib:/usr/lib64:/usr/lib} -cp $chronos_jar"
 #
 #- SpyMemcached logging implementation ----------------------------------------
 #JAVA_OPTS="$JAVA_OPTS -Dnet.spy.log.LoggerImpl=net.spy.memcached.compat.log.Log4JLogger"
