@@ -51,6 +51,13 @@ function load_config {
     fi
 }
 
+function logged {
+  local token="$1[$$]" ; shift
+  exec 1> >(exec logger -p user.info   -t "$token")
+  exec 2> >(exec logger -p user.notice -t "$token")
+  "$@"
+}
+
 load_config
 
 EXTRA_OPTS="${args[@]}"
@@ -87,5 +94,5 @@ JAVA_OPTS="$JAVA_OPTS -Djava.library.path=${JAVA_LIBPATH:-/usr/local/lib:/usr/li
 echo -e "Launch Chronos"
 CMD="java $JAVA_OPTS org.apache.mesos.chronos.scheduler.Main $EXTRA_OPTS $@"
 echo -e "cmd: $CMD"
-exec $CMD
-
+# Push standard out to syslog and run chronos jar
+logged chronos $CMD
