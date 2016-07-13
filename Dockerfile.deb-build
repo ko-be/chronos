@@ -8,3 +8,4 @@ RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources
     npm \
     mesos \
     && ln -s /usr/bin/nodejs /usr/bin/node
+RUN ln -s /usr/share/java/commons-lang.jar /usr/share/maven/lib/
