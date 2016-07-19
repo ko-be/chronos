@@ -17,17 +17,17 @@
     },
 
     "version": {
-        "name": "${project.version}",
-        "desc": "Version ${project.version}",
-        "released": "${build.timestamp}",
-        "vcs_tag": "v${project.version}",
+        "name": "${project_version}",
+        "desc": "Version ${project_version}",
+        "released": "${build_timestamp}",
+        "vcs_tag": "${project_version}",
         "attributes": [],
         "gpgSign": false
     },
 
     "files":
         [
-        {"includePattern": "target/(.*.deb)", "uploadPattern": "$1", "matrixParams": { "deb_distribution": "lucid,trusty", "deb_component": "main", "deb_architecture": "amd64"} }
+        {"includePattern": "dist/(.*.deb)", "uploadPattern": "$1", "matrixParams": { "deb_distribution": "lucid,trusty", "deb_component": "main", "deb_architecture": "amd64"} }
         ],
     "publish": true
 }

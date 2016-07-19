@@ -19,7 +19,7 @@ cache:
     - $HOME/.m2/repository
 deploy:
     - provider: bintray
-      file: "target/classes/deb/bintray.json" # pulling out of target as variables get interp'ed by maven
+      file: "dist/bintray.json" # pulling out of target as variables get interp'ed by maven
       user: yelptravis
       key:
         secure: "m1H04AKg1C1Al4/Z+hCcyi4ULfVxT1NeSMoOpH7gZ5d4ZwwtFV9hshj/v/cnR2dZJLSoCMq88GNTMffNqNHE5jgnLs4+1kM8xzl+ZiD4Gt21UG4WnvUy+vJ7xKkYqlNiG2cNvv6MPGv1an0EkFUuP5podViuKBWgyWKCr9SQBAIMJQEXjnW3ifR00dzr+HTe4ayHJAtkMzlPiSdSzkYxw5yJP265Tt+Ov4M9FgkH4LU3aJHQzZ6kt2/DULw/iXy7A2N2JM9RGTp1cDjLLXiw1bAbB65b1gsHPa/swGKp5IafOwl8VzXKwIlKODDv5f5V0tcX/0eUzJ3tJ6dHYzBjnLJiWQD2gTgSid0HbPVsD9VI9NBsdImrIJK6blcS7/zJYxpAOA6Vcbn55QWV1AkYCid+t9yb8RI/bHkP0Q2K2r97bHlGTkpbIysvmEf+349TJgMAyOpimoWp7kJ6P+hDPVUtGUjUiWyaK8l4SUUZy7lHVa9rHA9JIbOUvqNDt4FBiUfG/r1GrzD1SSMQBNmY3qo4qOt3BsOGf4uvl5OeclXBVW5HFt6Seti8t9E885yfjEA0xNxDLlLoMAW9uWQf/nMgNFtD3L7l+/m7uitMYWfmra5t7nfa07CguN2wClYx7CppZN0j2QpOLLkjT7QbzsEhGBs6EHCgeBx1DmPyokM="
