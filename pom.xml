@@ -18,9 +18,6 @@
   <properties>
     <encoding>UTF-8</encoding>
     <assets.dir>${basedir}/src/main/resources/assets</assets.dir>
-    <maven.build.timestamp.format>yyyy-MM-dd</maven.build.timestamp.format>
-    <!-- avoiding maven bug where timestamp is not available to resource filtering -->
-    <build.timestamp>${maven.build.timestamp}</build.timestamp>
 
     <!-- language versions -->
     <java.abi>1.7</java.abi>
@@ -277,11 +274,6 @@
         <targetPath>assets</targetPath>
         <directory>src/main/resources/assets/app</directory>
       </resource>
-      <resource>
-          <targetPath>deb</targetPath>
-          <directory>src/deb</directory>
-          <filtering>true</filtering>
-      </resource>
     </resources>
     <pluginManagement>
       <plugins>
@@ -487,76 +479,18 @@
             </goals>
             <configuration>
               <target>
-                <property name="compile_classpath" refid="maven.compile.classpath" />
-                <property name="configFile" value="${assets.dir}/app.build.js" />
-                <property name="optimizerFile" value="${assets.dir}/r.js" />
-                <property name="sourceDir" value="${assets.dir}" />
-                <property name="failOnError" value="true" />
+                <property name="compile_classpath" refid="maven.compile.classpath"/>
+                <property name="configFile" value="${assets.dir}/app.build.js"/>
+                <property name="optimizerFile" value="${assets.dir}/r.js"/>
+                <property name="sourceDir" value="${assets.dir}"/>
+                <property name="failOnError" value="true"/>
                 <ant antfile="${basedir}/build.xml">
-                  <target name="generateAssets" />
+                  <target name="generateAssets"/>
                 </ant>
               </target>
             </configuration>
           </execution>
         </executions>
-      </plugin>
-      <plugin>
-          <artifactId>jdeb</artifactId>
-          <groupId>org.vafer</groupId>
-          <version>1.5</version>
-          <executions>
-              <execution>
-                  <phase>package</phase>
-                  <goals>
-                      <goal>jdeb</goal>
-                  </goals>
-                  <configuration>
-                      <dataSet>
-                          <data>
-                              <src>${project.build.directory}/${project.build.finalName}.jar</src>
-                              <dst>/opt/chronos/${project.build.finalName}.jar</dst>
-                              <type>file</type>
-                          </data>
-                          <data>
-                              <src>${basedir}/src/deb/chronos.init</src>
-                              <dst>/etc/init.d/chronos</dst>
-                              <type>file</type>
-                              <mapper>
-                                  <type>perm</type>
-                                  <filemode>755</filemode>
-                              </mapper>
-                          </data>
-                          <data>
-                              <src>${basedir}/src/deb/chronos.bash</src>
-                              <dst>/usr/bin/chronos</dst>
-                              <type>file</type>
-                              <mapper>
-                                  <type>perm</type>
-                                  <filemode>755</filemode>
-                              </mapper>
-                          </data>
-                          <data>
-                              <src>${basedir}/src/deb/chronos.default</src>
-                              <dst>/etc/default/chronos</dst>
-                              <type>file</type>
-                              <mapper>
-                                  <type>perm</type>
-                                  <filemode>644</filemode>
-                              </mapper>
-                          </data>
-                          <data>
-                              <src>${basedir}/src/deb/chronos.logrotate</src>
-                              <dst>/etc/logrotate.d/chronos</dst>
-                              <type>file</type>
-                              <mapper>
-                                  <type>perm</type>
-                                  <filemode>644</filemode>
-                              </mapper>
-                          </data>
-                      </dataSet>
-                  </configuration>
-              </execution>
-          </executions>
       </plugin>
       <plugin>
           <groupId>org.apache.maven.plugins</groupId>
