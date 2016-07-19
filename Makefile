@@ -2,23 +2,22 @@
 #
 # Maven is still the recommended route for building chronos.
 
-itest_trusty: deb
+itest_trusty: docker-run-ubuntu-trusty
 
 itest_lucid: deb
-
-deb: maven-build
-	[ -d dist ] || mkdir dist
-	cp target/*.deb dist/
 
 release: docker-build
 	# create correctly versioned poms, tag and push. Don't bother running tests as travis/jenkins will run them
 	docker run -v $(CURDIR):/work:rw chronos_maven_builder bash -c "cd /work && mvn -B -DskipTests release:prepare release:clean"
 
-maven-build: docker-build
-	docker run -v $(CURDIR):/work:rw chronos_maven_builder bash -c "cd /work && mvn package"
+docker-run-%: docker-build dist
+	docker run -v $(CURDIR):/work:rw chronos_maven_builder bash -c "/work/deb-build.sh $*"
 
 docker-build:
 	docker build -f Dockerfile.deb-build -t "chronos_maven_builder" .
 
+dist:
+	mkdir dist
+
 clean:
-	rm -rf dist
+	rm -rf dist target

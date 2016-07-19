@@ -7,7 +7,12 @@ RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources
     apt-get install -y maven \
     npm \
     mesos \
+    git \
     && ln -s /usr/bin/nodejs /usr/bin/node
+
 # trusty's commons lang is not available to maven by default
 # See http://stackoverflow.com/questions/17781746/java-lang-classnotfoundexception-org-apache-commons-lang-stringutils-from-basec
 RUN ln -s /usr/share/java/commons-lang.jar /usr/share/maven/lib/
+
+RUN apt-get install -y --no-install-recommends ruby ruby-dev
+RUN gem install fpm
