@@ -18,12 +18,14 @@ cd chronos
 PROJECT_VER=`mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version\
     |grep '^[0-9].*' | tail -n 1|xargs echo -n`
 PKG_REL="0.1.`date -u +'%Y%m%d%H%M%S'`"
+GIT_VER=`git describe`
 cd ..
 make PKG_VER="$PROJECT_VER" PKG_REL="$PKG_REL" $TARGETS
 cp *.deb chronos/dist
 
 # Create bintray config for travis
 # replaces placeholders with our vars
-sed -e "s/\${project_version}/$MVN_VER/"\
+sed -e "s/\${project_version}/$PROJECT_VER/"\
     -e "s/\${build_timestamp}/`date -u +'%Y-%m-%d'`/"\
+    -e "s/\${git_version}/$GIT_VER/"/
     chronos/src/deb/bintray.json > chronos/dist/bintray.json

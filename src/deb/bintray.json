@@ -20,7 +20,7 @@
         "name": "${project_version}",
         "desc": "Version ${project_version}",
         "released": "${build_timestamp}",
-        "vcs_tag": "${project_version}",
+        "vcs_tag": "${git_version}",
         "attributes": [],
         "gpgSign": false
     },
