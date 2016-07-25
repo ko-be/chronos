@@ -4,7 +4,8 @@
 
 itest_trusty: docker-run-ubuntu-trusty
 
-itest_lucid: deb
+# Yes, we just run the same package as trusty, it's just some java ;)
+itest_lucid: docker-run-ubuntu-trusty
 
 release: docker-build
 	# create correctly versioned poms, tag and push. Don't bother running tests as travis/jenkins will run them
@@ -16,7 +17,7 @@ docker-run-%: docker-build dist
 docker-build:
 	docker build -f Dockerfile.deb-build -t "chronos_maven_builder" .
 
-dist:
+dist: clean
 	mkdir dist
 
 clean:
