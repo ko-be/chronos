@@ -8,8 +8,10 @@
 TARGETS=$1
 
 cd ~
-git clone https://github.com/mesosphere/chronos-pkg.git
-cd chronos-pkg
+wget https://github.com/mesosphere/chronos-pkg/archive/master.zip
+unzip master.zip
+# git clone https://github.com/mesosphere/chronos-pkg.git
+cd chronos-pkg-master
 rm -rf chronos
 ln -s /work chronos
 cd chronos

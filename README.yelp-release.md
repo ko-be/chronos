@@ -6,15 +6,18 @@
 * Travis runs maven on tag, pushes deb to bintray
 * Also mirrored internally for jenkins build
 
-## jdeb
+## chronos-pkg
+This fork of chronos pulls the chronos-pkg project down into a docker container
+and builds a deb package from the currently checked out version of chronos.
 
-This fork of Chronos uses the jdeb plugin to repackage the chronos jar as a deb package directly from maven.
+This mechanism allows us to build the project easily whenever a new maven release is pushed.  
 
-Files used for the deb metadata are stored in `src/deb/*`, including the control file template.
-
-Note: src/deb/bintray.json includes maven style placeholders, e.g. `${project.version}`. These are interpolated
-when maven runs, with the resulting file ending in `target/classes/deb`, which is where travis is configured to look.
+The deb-build.sh script is run inside the Dockerfile.deb-build container, packaging
+the deb and templating our bintray.json enabling us to push the artifacts up to our
+public repository.
 
 ## Travis
 
-Travis is configured to release only on tags starting `v`. It runs maven (which will generate a deb), then pushes the deb to bintray.
+Travis is configured to release only on tags starting `v`. It runs `make itest_trusty`, 
+then pushes the deb to bintray, using the json templated in `deb-build.sh`
+
