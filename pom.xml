@@ -59,7 +59,7 @@
   <repositories>
     <repository>
         <id>central</id>
-        <name>Maven Centra</name>
+        <name>Maven Central</name>
         <url>http://repo.maven.apache.org/maven2/</url>
     </repository>
     <repository>
