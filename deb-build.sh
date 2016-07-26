@@ -17,7 +17,8 @@ ln -s /work chronos
 cd chronos
 PROJECT_VER=`mvn org.apache.maven.plugins:maven-help-plugin:2.1.1:evaluate -Dexpression=project.version\
     |grep '^[0-9].*' | tail -n 1|xargs echo -n`
-PKG_REL="0.1.`date -u +'%Y%m%d%H%M%S'`"
+# From chronos-pkg/Makefile - For release builds: PKG_REL=1
+PKG_REL="1"
 cd ..
 make PKG_VER="$PROJECT_VER" PKG_REL="$PKG_REL" $TARGETS
 cp *.deb chronos/dist
