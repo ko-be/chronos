@@ -23,7 +23,7 @@ import mesosphere.chaos.validation.{ConstraintViolationExceptionMapper, JacksonM
 
 class ChronosRestModule extends ServletModule {
 
-  val guiceContainerUrl = "/scheduler/*"
+  val guiceContainerUrl = "/*"
 
   // Override these in a subclass to mount resources at a different path
   val pingUrl = "/ping"
