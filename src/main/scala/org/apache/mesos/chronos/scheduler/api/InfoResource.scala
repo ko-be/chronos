@@ -1,7 +1,7 @@
 package org.apache.mesos.chronos.scheduler.api
 
 import org.apache.mesos.chronos.scheduler.config.SchedulerConfiguration
-import org.apache.mesos.chronos.scheduler.config.SchedulerConfiguration
+import org.apache.curator.framework.recipes.leader.{LeaderLatch, Participant}
 import mesosphere.chaos.http.HttpConf
 import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.mesos.Protos.FrameworkID
@@ -10,12 +10,14 @@ import java.util.logging.{Level, Logger}
 import javax.ws.rs._
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{MediaType, Response}
+import scala.util.Try
 import com.google.inject.Inject
 
 @Path(PathConstants.infoPath)
 class InfoResource @Inject()(
   val schedulerConfiguration: SchedulerConfiguration,
-  val frameworkIdUtil: FrameworkIdUtil
+  val frameworkIdUtil: FrameworkIdUtil,
+  val leaderLatch: LeaderLatch
 ) {
   private val log = Logger.getLogger(getClass.getName)
 
@@ -53,6 +55,7 @@ class InfoResource @Inject()(
     Response.ok(
        Map(
          "version" -> schedulerConfiguration.version,
+         "leader" -> getCurrentLeader().getOrElse("Unknown"),
          "frameworkId" -> frameworkId.get.getValue,
          "mail_config" -> mailConfig,
          "zookeeper_config" -> zookeeperConfig,
@@ -60,4 +63,6 @@ class InfoResource @Inject()(
        )
     ).build
   }
+
+  private def getCurrentLeader(): Try[String] = Try(leaderLatch.getLeader.getId)
 }
