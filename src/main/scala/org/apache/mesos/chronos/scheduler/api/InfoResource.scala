@@ -1,17 +1,16 @@
 package org.apache.mesos.chronos.scheduler.api
 
-import org.apache.mesos.chronos.scheduler.config.SchedulerConfiguration
-import org.apache.curator.framework.recipes.leader.{LeaderLatch, Participant}
-import mesosphere.chaos.http.HttpConf
-import mesosphere.mesos.util.FrameworkIdUtil
-import org.apache.mesos.Protos.FrameworkID
+import java.util.logging.Logger
 
-import java.util.logging.{Level, Logger}
-import javax.ws.rs._
-import javax.ws.rs.core.Response.Status
-import javax.ws.rs.core.{MediaType, Response}
 import scala.util.Try
+
 import com.google.inject.Inject
+import javax.ws.rs._
+import javax.ws.rs.core.{Response, MediaType}
+import mesosphere.mesos.util.FrameworkIdUtil
+import org.apache.curator.framework.recipes.leader.LeaderLatch
+import org.apache.mesos.Protos.FrameworkID
+import org.apache.mesos.chronos.scheduler.config.SchedulerConfiguration
 
 @Path(PathConstants.infoPath)
 class InfoResource @Inject()(
@@ -25,8 +24,8 @@ class InfoResource @Inject()(
   @Produces(Array(MediaType.APPLICATION_JSON))
   def info(): Response = {
 
-    import scala.concurrent.ExecutionContext.Implicits.global
     import mesosphere.util.BackToTheFuture.Implicits.defaultTimeout
+    import scala.concurrent.ExecutionContext.Implicits.global
     val frameworkId = frameworkIdUtil.fetch
 
     val chronosConfiguration = Map(
