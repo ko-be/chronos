@@ -43,7 +43,6 @@ class InfoResource @Inject()(
     val mailConfig = Map(
       "mail_server" -> schedulerConfiguration.mailServer.get.getOrElse("None"),
       "mail_user" -> schedulerConfiguration.mailUser.get.getOrElse("None"),
-      "mail_password" -> schedulerConfiguration.mailUser.get.getOrElse("None"),
       "mail_from" -> schedulerConfiguration.mailFrom.get.getOrElse("None"),
       "mail_ssl_on" -> schedulerConfiguration.mailFrom.get.getOrElse("None")
     )
