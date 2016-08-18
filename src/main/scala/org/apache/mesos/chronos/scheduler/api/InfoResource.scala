@@ -30,18 +30,32 @@ class InfoResource @Inject()(
     val frameworkId = frameworkIdUtil.fetch
 
     val chronosConfiguration = Map(
-        "master" -> schedulerConfiguration.master(),
         "user" -> schedulerConfiguration.user(),
-        "failoverTimeoutSeconds" -> schedulerConfiguration.failoverTimeoutSeconds(),
-        "schedulerHorizonSeconds" -> schedulerConfiguration.scheduleHorizonSeconds(),
-        "clusterName" -> schedulerConfiguration.clusterName.get.getOrElse("None"),
+        "failover_timeout" -> schedulerConfiguration.failoverTimeoutSeconds(),
+        "scheduler_horizon" -> schedulerConfiguration.scheduleHorizonSeconds(),
+        "cluster_name" -> schedulerConfiguration.clusterName.get.getOrElse("None"),
         "hostname" -> schedulerConfiguration.hostname(),
-        "leaderMaxIdleTime" -> schedulerConfiguration.leaderMaxIdleTimeMs(),
-        "minReviveOffersInterval" -> schedulerConfiguration.minReviveOffersInterval(),
-        "declineOfferDuration" -> schedulerConfiguration.declineOfferDuration.get.getOrElse("None"),
-        "reconciliationInterval" -> schedulerConfiguration.reconciliationInterval(),
-        "defaultTaskEpsilon" -> schedulerConfiguration.taskEpsilon.get.getOrElse("defaultTaskEpsilon")
+        "leader_max_idle_time" -> schedulerConfiguration.leaderMaxIdleTimeMs(),
+        "min_revive_offers_interval" -> schedulerConfiguration.minReviveOffersInterval(),
+        "decline_offer_duration" -> schedulerConfiguration.declineOfferDuration.get.getOrElse("None"),
+        "reconciliation_interval" -> schedulerConfiguration.reconciliationInterval(),
+        "default_task_epsilon" -> schedulerConfiguration.taskEpsilon.get.getOrElse("defaultTaskEpsilon"),
+        "failure_retry_delay" -> schedulerConfiguration.failureRetryDelayMs(),
+        "disable_after_failures" -> schedulerConfiguration.disableAfterFailures(),
+        "task_epsilon" -> schedulerConfiguration.taskEpsilon(),
+        "reconciliation_interval" -> schedulerConfiguration.reconciliationInterval()
     )
+    val mesosConfig = Map(
+        "master" -> schedulerConfiguration.master(),
+        "mesos_task_mem" -> schedulerConfiguration.mesosTaskMem(),
+        "mesos_task_cpu" -> schedulerConfiguration.mesosTaskCpu(),
+        "mesos_task_disk" -> schedulerConfiguration.mesosTaskDisk(),
+        "mesos_checkpoint" -> schedulerConfiguration.mesosCheckpoint(),
+        "mesos_role" -> schedulerConfiguration.mesosRole(),
+        "mesos_framework_name" -> schedulerConfiguration.mesosFrameworkName(),
+        "mesos_authentication_principal" -> schedulerConfiguration.mesosAuthenticationPrincipal.get.getOrElse("None")
+    )
+
     val mailConfig = Map(
       "mail_server" -> schedulerConfiguration.mailServer.get.getOrElse("None"),
       "mail_user" -> schedulerConfiguration.mailUser.get.getOrElse("None"),
@@ -49,8 +63,9 @@ class InfoResource @Inject()(
       "mail_ssl_on" -> schedulerConfiguration.mailFrom.get.getOrElse("None")
     )
     val zookeeperConfig = Map(
-      "zookeeperTimeout" -> schedulerConfiguration.zooKeeperTimeout(),
-      "zookeeperPath" -> schedulerConfiguration.zooKeeperPath()
+      "zk_hosts" -> schedulerConfiguration.zookeeperServersString(),
+      "zookeeper_timeout" -> schedulerConfiguration.zooKeeperTimeout(),
+      "zookeeper_path" -> schedulerConfiguration.zooKeeperPath()
     )
     Response.ok(
        Map(
@@ -59,7 +74,8 @@ class InfoResource @Inject()(
          "frameworkId" -> frameworkId.get.getValue,
          "mail_config" -> mailConfig,
          "zookeeper_config" -> zookeeperConfig,
-         "schedulerConfiguration" -> chronosConfiguration
+         "mesos_config" -> mesosConfig,
+         "chronos_configuration" -> chronosConfiguration
        )
     ).build
   }
