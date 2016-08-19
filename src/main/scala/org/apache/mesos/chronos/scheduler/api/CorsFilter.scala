@@ -11,7 +11,6 @@ class CorsFilter extends Filter {
   def doFilter(rawRequest: ServletRequest, rawResponse: ServletResponse, chain: FilterChain) {
     rawResponse match {
       case response: HttpServletResponse =>
-          log.debug("Adding cors header to api response")
           response.setHeader("Access-Control-Allow-Origin", "*");
           chain.doFilter(rawRequest, rawResponse)
       case _ =>
