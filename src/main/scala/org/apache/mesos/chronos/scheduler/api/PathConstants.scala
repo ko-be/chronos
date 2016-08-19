@@ -31,5 +31,6 @@ object PathConstants {
 
   final val isMasterPath = "isMaster"
   final val infoPath = "info"
+  final val leaderPath = "leader"
   final val uriTemplate = "http://%s%s"
 }
