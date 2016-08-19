@@ -59,7 +59,7 @@ class InfoResource @Inject()(
       "mail_server" -> schedulerConfiguration.mailServer.get.getOrElse("None"),
       "mail_user" -> schedulerConfiguration.mailUser.get.getOrElse("None"),
       "mail_from" -> schedulerConfiguration.mailFrom.get.getOrElse("None"),
-      "mail_ssl_on" -> schedulerConfiguration.mailFrom.get.getOrElse("None")
+      "mail_ssl_on" -> schedulerConfiguration.mailSslOn()
     )
     val zookeeperConfig = Map(
       "zk_hosts" -> schedulerConfiguration.zookeeperServersString(),
