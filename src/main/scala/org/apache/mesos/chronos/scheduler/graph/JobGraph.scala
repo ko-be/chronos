@@ -21,13 +21,25 @@ import scala.collection.mutable.ListBuffer
 @ThreadSafe
 class JobGraph {
   val dag = new DirectedAcyclicGraph[String, DefaultEdge](classOf[DefaultEdge])
+  
+  //a mapping of [BaseJob -> [String]], where
+  //the key represents a vertex in the graph.
+  //this is used to track the number of edges that have been
+  //'completed' between one vertex and its parents.
+  //we can use this to discover when 'all' of the parents of a
+  //given vertex have finished successfully.
+  //it is expected the list of edges will be reset to the empty for each
+  //child of a given job.
+  val parentCompletionMap = mutable.Map[String, List[String]]()
+  
   val edgeInvocationCount = mutable.Map[DefaultEdge, Long]()
+  
   private[this] val log = Logger.getLogger(getClass.getName)
   private[this] val jobNameMapping: concurrent.Map[String, BaseJob] = new ConcurrentHashMap().asScala
   private[this] val lock = new Object
 
   def parentJobs(job: DependencyBasedJob) = parentJobsOption(job) match {
-    case None =>
+    case None =>  
       throw new IllegalArgumentException(s"requirement failed: Job ${job.name} does not have all parents defined!")
     case Some(jobs) =>
       jobs
@@ -121,6 +133,22 @@ class JobGraph {
     }
   }
 
+  def assertChildReadyForExecution(childVertex:String): Boolean = {
+    val parents = jobNameMapping.get(childVertex).flatMap {
+        case x: DependencyBasedJob => Some(x)
+        case _ => None
+      }.flatMap {
+        x => parentJobsOption(x)
+      }.map { x => x.map { y => y.name } }
+    val completedParents = parentCompletionMap.get(childVertex).getOrElse(List())
+    completedParents == parents.getOrElse(List())
+  }
+
+  def getExecutableChildren2(vertex: String): List[String] = {
+    val children = getChildren(vertex)
+    children.filter(child => assertChildReadyForExecution(child)).toList
+  }
+
   /**
    * Retrieves all the jobs that need to be triggered that depend on the finishedJob.
    * @param vertex
@@ -148,6 +176,8 @@ class JobGraph {
 
       val children = getChildren(vertex)
       for (child <- children) {
+        // if the child only has a single edge; that is, the child is not
+        // waiting on any other jobs to complete, then trigger it.
         val edgesToChild = getEdgesToParents(child)
         if (edgesToChild.size == 1) {
           results += child
@@ -187,6 +217,10 @@ class JobGraph {
           edgeInvocationCount.put(edge, 0)
       })
     }
+  }
+
+  def resetDependencyInvocations2(vertex: String) {
+    parentCompletionMap.put(vertex, List())
   }
 
   def getEdgesToParents(child: String): Iterable[DefaultEdge] = {

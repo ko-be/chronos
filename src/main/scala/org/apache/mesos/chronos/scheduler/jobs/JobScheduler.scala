@@ -254,7 +254,6 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
     }
 
     persistenceStore.removeTask(taskId)
-
     val jobName = TaskUtils.getJobNameForTaskId(taskId)
     val jobOption = jobGraph.lookupVertex(jobName)
 
@@ -314,6 +313,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       replaceJob(job, newJob)
       log.info("Resetting dependency invocations for %s".format(newJob))
       jobGraph.resetDependencyInvocations(jobName)
+      jobGraph.resetDependencyInvocations2(jobName)
       log.info("Processing dependencies for %s".format(jobName))
       processDependencies(jobName, Option(DateTime.parse(newJob.lastSuccess)))
     }
@@ -344,7 +344,18 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   }
 
   private def processDependencies(jobName: String, taskDate: Option[DateTime]) {
+    //for each of the dependencies, mark that edge as 'done'
+    val allDependents = jobGraph.getChildren(jobName)
+    for (dependent <- allDependents) {
+      jobGraph.parentCompletionMap.put(dependent, jobGraph.parentCompletionMap.get(dependent).getOrElse(List()).++(List(jobName)))
+      log.info(s"Marked parent job ${jobName} as completed for child ${dependent}")
+      log.info(s"Marked parent job ${jobName} as completed for child ${jobGraph.parentCompletionMap.get(dependent)}")
+    }
     val dependents = jobGraph.getExecutableChildren(jobName)
+    val otherDependents = jobGraph.getExecutableChildren2(jobName)
+    log.info(dependents.length.toString)
+    log.info(otherDependents.length.toString)
+    assert(dependents == otherDependents)
     if (dependents.nonEmpty) {
       log.fine("%s has dependents: %s .".format(jobName, dependents.mkString(",")))
       dependents.foreach {
