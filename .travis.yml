@@ -2,10 +2,13 @@ branches:
   only:
     - master
     - /^v[0-9.]+/
+env:
+  - MAKE_TARGET=itest_trusty
+  - MAKE_TARGET=itest_xenial
 sudo: required
 services:
   - docker
-script: make itest_trusty
+script: if [[ -n "$MAKE_TARGET" ]]; then make "$MAKE_TARGET"; fi
 cache:
   directories:
     - $HOME/.m2/repository

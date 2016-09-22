@@ -4,8 +4,7 @@
 
 itest_trusty: docker-run-ubuntu-trusty
 
-# Yes, we just run the same package as trusty, it's just some java ;)
-itest_lucid: docker-run-ubuntu-trusty
+itest_xenial: docker-run-ubuntu-xenial
 
 release: docker-build
 	# create correctly versioned poms, tag and push. Don't bother running tests as travis/jenkins will run them

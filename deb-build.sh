@@ -31,4 +31,5 @@ cp *.deb chronos/dist
 sed -e "s/\${project_version}/$PROJECT_VER/"\
     -e "s/\${build_timestamp}/`date -u +'%Y-%m-%d'`/"\
     -e "s/\${git_version}/$PROJECT_VER/"\
+    -e "s/\${project_distribution}/${TARGETS#ubuntu-}/"\
     chronos/src/deb/bintray.json > chronos/dist/bintray.json
