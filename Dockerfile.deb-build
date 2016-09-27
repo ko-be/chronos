@@ -2,13 +2,15 @@ FROM ubuntu:14.04
 MAINTAINER Toby Cole <tobyc@yelp.com>
 
 RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list && \
-    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
-    apt-get update && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF
+
+RUN apt-get update && \
     apt-get install -y maven \
     npm \
     mesos \
-    wget \
-    && ln -s /usr/bin/nodejs /usr/bin/node
+    wget
+
+RUN ln -s /usr/bin/nodejs /usr/bin/node
 
 # trusty's commons lang is not available to maven by default
 # See http://stackoverflow.com/questions/17781746/java-lang-classnotfoundexception-org-apache-commons-lang-stringutils-from-basec
