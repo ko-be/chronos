@@ -2,7 +2,7 @@ package org.apache.mesos.chronos.scheduler.api
 
 import com.google.inject.Inject
 import javax.ws.rs.{GET, Path, Produces}
-import javax.ws.rs.core.Response
+import javax.ws.rs.core.{Response, MediaType}
 import org.apache.mesos.chronos.scheduler.jobs.JobScheduler
 
 
