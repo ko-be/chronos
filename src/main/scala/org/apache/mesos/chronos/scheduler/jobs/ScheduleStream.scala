@@ -1,32 +1,27 @@
 package org.apache.mesos.chronos.scheduler.jobs
 
+import org.apache.mesos.chronos.schedule.{Schedule, ISO8601Schedule, CronSchedule}
+
 /**
  * A stream of schedules.
  * Calling tail will return a clipped schedule.
- * The schedule consists of a string representation of an ISO8601 expression as well as a BaseJob.
+ * Each unit in the stream consists of a Schedule, a job name, and a schedule Time Zone (TODO: remove schedule time zone)
  * @author Florian Leibert (flo@leibert.de)
  */
-class ScheduleStream(val schedule: String, val jobName: String, val scheduleTimeZone: String = "") {
+class ScheduleStream(val schedule: Schedule, val jobName: String, val scheduleTimeZone: String = "") {
 
-  def head: (String, String, String) = (schedule, jobName, scheduleTimeZone)
+  def head: (Schedule, String, String) = (schedule, jobName, scheduleTimeZone)
 
-  /**
-   * Returns a clipped schedule.
-   * @return
-   */
   def tail: Option[ScheduleStream] =
-    //TODO(FL) Represent the schedule as a data structure instead of a string.
-    Iso8601Expressions.parse(schedule, scheduleTimeZone) match {
-      case Some((rec, start, per)) =>
-        if (rec == -1)
-          Some(new ScheduleStream(Iso8601Expressions.create(rec, start.plus(per), per), jobName,
+    schedule match {
+      case iso8601: ISO8601Schedule => iso8601.recurrences match {
+        case -1 => Some(new ScheduleStream(new ISO8601Schedule(iso8601.recurrences, iso8601.start.plus(iso8601.period), iso8601.period), jobName,
             scheduleTimeZone))
-        else if (rec > 0)
-          Some(new ScheduleStream(Iso8601Expressions.create(rec - 1, start.plus(per), per), jobName,
+        case 0 => None
+        case _ => Some(new ScheduleStream(new ISO8601Schedule(iso8601.recurrences - 1, iso8601.start.plus(iso8601.period), iso8601.period), jobName,
             scheduleTimeZone))
-        else
-          None
-      case None =>
-        None
+        
+      }
+      case cron: CronSchedule => Some(new ScheduleStream(cron, jobName, scheduleTimeZone))
     }
 }

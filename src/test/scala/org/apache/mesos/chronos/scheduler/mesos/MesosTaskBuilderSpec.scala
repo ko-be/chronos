@@ -6,6 +6,7 @@ import org.apache.mesos.chronos.scheduler.config.SchedulerConfiguration
 import org.apache.mesos.chronos.scheduler.jobs.Parameter
 import org.apache.mesos.chronos.scheduler.jobs.Volume
 import org.apache.mesos.chronos.scheduler.jobs._
+import org.apache.mesos.chronos.schedule.ISO8601Parser
 import org.apache.mesos.chronos.scheduler.jobs.constraints.{LikeConstraint, EqualsConstraint}
 import org.joda.time.Minutes
 import org.specs2.mock.Mockito
@@ -40,7 +41,7 @@ class MesosTaskBuilderSpec extends SpecificationWithJUnit with Mockito {
       LikeConstraint("rack", "rack-[1-3]")
     )
 
-    new ScheduleBasedJob("FOO/BAR/BAM", "AJob", "noop", Minutes.minutes(5).toPeriod, 10L, 20L,
+    new ScheduleBasedJob(ISO8601Parser("R1/2012-01-01T00:00:01.000Z/PT1M").get, "AJob", "noop", Minutes.minutes(5).toPeriod, 10L, 20L,
       "fooexec", "fooflags", "none", 7, "foo@bar.com", "Foo", "Test schedule based job", "TODAY",
       "YESTERDAY", true, cpus = 2, disk = 3, mem = 5, container = container, environmentVariables = Seq(),
       shell = true, arguments = Seq(), softError = true, constraints = constraints)

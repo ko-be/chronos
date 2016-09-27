@@ -3,12 +3,14 @@ package org.apache.mesos.chronos.scheduler.jobs
 import org.joda.time._
 import org.specs2.mock._
 import org.specs2.mutable._
+import org.apache.mesos.chronos.schedule.ISO8601Parser
 
 class TaskUtilsSpec extends SpecificationWithJUnit with Mockito {
-
+  val schedule = ISO8601Parser("R/2012-01-01T00:00:01.000Z/P1M").get
+  
   "TaskUtils" should {
     "Get taskId" in {
-      val schedule = "R/2012-01-01T00:00:01.000Z/P1M"
+      
       val arguments = "-a 1 -b 2"
       val job1 = new ScheduleBasedJob(schedule, "sample-name", "sample-command", arguments = List(arguments))
       val job2 = new ScheduleBasedJob(schedule, "sample-name", "sample-command")

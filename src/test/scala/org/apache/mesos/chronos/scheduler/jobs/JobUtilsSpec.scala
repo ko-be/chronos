@@ -6,15 +6,17 @@ import org.apache.curator.framework.CuratorFramework
 import org.joda.time._
 import org.specs2.mock._
 import org.specs2.mutable._
+import org.apache.mesos.chronos.schedule.{ISO8601Parser, Schedule, ISO8601Schedule}
 
 class JobUtilsSpec extends SpecificationWithJUnit with Mockito {
-
+  
+  
   "Save a ScheduleBasedJob job correctly and be able to load it" in {
+    val schedule = ISO8601Parser("R1/2012-01-01T00:00:01.000Z/PT1M").get
     val mockZKClient = mock[CuratorFramework]
     val config = new SchedulerConfiguration {}
     val store = new MesosStatePersistenceStore(mockZKClient, config)
-    val startTime = "R1/2012-01-01T00:00:01.000Z/PT1M"
-    val job = new ScheduleBasedJob(startTime, "sample-name", "sample-command")
+    val job = new ScheduleBasedJob(schedule, "sample-name", "sample-command")
     val mockScheduler = mock[JobScheduler]
 
     store.persistJob(job)
@@ -24,34 +26,33 @@ class JobUtilsSpec extends SpecificationWithJUnit with Mockito {
   }
 
   "Can skip forward a job" in {
-    val schedule = "R/2012-01-01T00:00:01.000Z/PT1M"
+    val schedule = ISO8601Parser("R/2012-01-01T00:00:01.000Z/PT60S").get
     val job = new ScheduleBasedJob(schedule, "sample-name", "sample-command")
-    val now = new DateTime()
+    val now = new DateTime("2012-01-02T00:00:01.000Z")
 
-    // Get the schedule stream, which should have been skipped forward
     val stream = JobUtils.skipForward(job, now)
-    val scheduledTime = Iso8601Expressions.parse(stream.get.schedule, job.scheduleTimeZone).get._2
+    val newSchedule = stream.get.schedule.asInstanceOf[ISO8601Schedule]
 
     // Ensure that this job runs today
-    scheduledTime.toLocalDate must_== now.toLocalDate
+    newSchedule.start.toLocalDate must_== now.toLocalDate
   }
 
   "Can skip forward a job with a monthly period" in {
-    val schedule = "R/2012-01-01T00:00:01.000Z/P1M"
+    val schedule = ISO8601Parser("R/2012-01-02T00:00:01.000Z/P1M").get
     val job = new ScheduleBasedJob(schedule, "sample-name", "sample-command")
-    val now = new DateTime()
+    val now = new DateTime("2012-02-01T00:00:01.000Z")
 
     // Get the schedule stream, which should have been skipped forward
     val stream = JobUtils.skipForward(job, now)
-    val scheduledTime = Iso8601Expressions.parse(stream.get.schedule, job.scheduleTimeZone).get._2
+    val newSchedule = stream.get.schedule.asInstanceOf[ISO8601Schedule]
 
     // Ensure that this job runs on the first of next month
-    scheduledTime.isAfter(now) must beTrue
-    scheduledTime.dayOfMonth().get must_== 1
+    newSchedule.start.isAfter(now) must beTrue
+    newSchedule.start.dayOfMonth().get must_== 2
   }
 
   "Can get job with arguments" in {
-    val schedule = "R/2012-01-01T00:00:01.000Z/P1M"
+    val schedule = ISO8601Parser("R/2012-01-01T00:00:01.000Z/PT1M").get
     val arguments = "--help"
     val command = "sample-command"
     val commandWithArguments = command + " " + arguments
