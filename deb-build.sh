@@ -3,6 +3,9 @@
 # This script is designed to be run within the
 # Dockerfile.deb-build docker image
 
+# Fail quickly if any command exits uncleanly
+set -e
+
 # build targets are passed in as first parameter
 # values for this can be found in github mesosphere/chronos-pkg/Makefile
 TARGETS=$1
