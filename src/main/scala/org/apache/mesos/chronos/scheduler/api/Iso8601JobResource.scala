@@ -10,7 +10,6 @@ import org.apache.mesos.chronos.scheduler.jobs.{ScheduleBasedJob, _}
 import com.codahale.metrics.annotation.Timed
 import com.google.common.base.Charsets
 import com.google.inject.Inject
-import org.apache.mesos.chronos.schedule.ISO8601Parser
 
 /**
  * The REST API to the iso8601 (timed, cron-like) component of the scheduler.
