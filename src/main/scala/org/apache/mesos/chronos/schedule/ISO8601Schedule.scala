@@ -13,7 +13,12 @@ class ISO8601Schedule(val recurrences: Long, val start: DateTime, val period: Pe
 
   override def equals(other: Any) = {
     other match {
-      case that: org.apache.mesos.chronos.schedule.ISO8601Schedule => that.canEqual(ISO8601Schedule.this) && recurrences == that.recurrences && start == that.start && period == that.period
+      case that: ISO8601Schedule => {
+        that.canEqual(ISO8601Schedule.this) &&
+        recurrences == that.recurrences &&
+        start == that.start &&
+        period == that.period
+      }
       case _ => false
     }
   }
