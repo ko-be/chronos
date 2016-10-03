@@ -6,7 +6,7 @@ import org.apache.curator.framework.CuratorFramework
 import org.joda.time._
 import org.specs2.mock._
 import org.specs2.mutable._
-import org.apache.mesos.chronos.schedule.{ISO8601Parser, Schedule, ISO8601Schedule}
+import org.apache.mesos.chronos.schedule.{ISO8601Parser, Schedule, ISO8601Schedule, AdjustedForStartDate}
 
 class JobUtilsSpec extends SpecificationWithJUnit with Mockito {
   
@@ -30,7 +30,7 @@ class JobUtilsSpec extends SpecificationWithJUnit with Mockito {
     val job = new ScheduleBasedJob(schedule, "sample-name", "sample-command")
     val now = new DateTime("2012-01-02T00:00:01.000Z")
 
-    val stream = JobUtils.skipForward(job, now)
+    val stream = JobUtils.makeScheduleStreamForDate(job, now)
     val newSchedule = stream.get.schedule.asInstanceOf[ISO8601Schedule]
 
     // Ensure that this job runs today
@@ -43,7 +43,7 @@ class JobUtilsSpec extends SpecificationWithJUnit with Mockito {
     val now = new DateTime("2012-02-01T00:00:01.000Z")
 
     // Get the schedule stream, which should have been skipped forward
-    val stream = JobUtils.skipForward(job, now)
+    val stream = JobUtils.makeScheduleStreamForDate(job, now)
     val newSchedule = stream.get.schedule.asInstanceOf[ISO8601Schedule]
 
     // Ensure that this job runs on the first of next month

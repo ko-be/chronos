@@ -13,13 +13,12 @@ import org.joda.time.{DateTime, Period, Seconds}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import org.apache.mesos.chronos.schedule.{ISO8601Schedule, CronSchedule}
+import org.apache.mesos.chronos.schedule.{ISO8601Schedule, CronSchedule, AdjustedForStartDate}
 
 /**
  * @author Florian Leibert (flo@leibert.de)
  */
 object JobUtils {
-  
 
   val jobNamePattern = """([\w\s\.#_-]+)""".r
   val stats = new mutable.HashMap[String, DescriptiveStatistics]()
@@ -104,11 +103,11 @@ object JobUtils {
     }
   }
 
-  def makeScheduleStream(job: ScheduleBasedJob, dateTime: DateTime) = {
+  def makeScheduleStreamForDate(job: ScheduleBasedJob, dateTime: DateTime): Option[ScheduleStream] = {
     job.schedule match {
       case schedule: ISO8601Schedule => {
         if(schedule.start.plus(job.epsilon).isBefore(dateTime)) {
-          skipForward(job, dateTime)
+          AdjustedForStartDate(schedule, dateTime).map(schedule => new ScheduleStream(schedule, job.name, job.scheduleTimeZone))
         } else {
           Some(new ScheduleStream(job.schedule, job.name, job.scheduleTimeZone))
         }
@@ -116,57 +115,6 @@ object JobUtils {
       //TODO: add cron support
       case _ =>
         None
-    }
-  }
-
-  def skipForward(job: ScheduleBasedJob, dateTime: DateTime): Option[ScheduleStream] = {
-    job.schedule match {
-      case schedule: ISO8601Schedule => {
-        val skip = calculateSkips(dateTime, schedule.start, schedule.period)
-        if (schedule.recurrences == -1) {
-          val newStart = schedule.start.plus(schedule.period.multipliedBy(skip))
-          log.warning("Skipped forward %d iterations, modified start from '%s' to '%s"
-            .format(skip, schedule.start.toString(DateTimeFormat.fullDate),
-              newStart.toString(DateTimeFormat.fullDate)))
-          Some(new ScheduleStream(
-              new ISO8601Schedule(schedule.recurrences, newStart, schedule.period), job.name, job.scheduleTimeZone))
-        } else if (schedule.recurrences < skip) {
-          log.info("Job %s was limited to %d recurrences; skipping forward %d, so job no longer valid".format(
-              job.name,
-              schedule.recurrences,
-              skip
-          ))
-          None
-        } else {
-          val newRecurrences = schedule.recurrences - skip
-          val newStart = schedule.start.plus(schedule.period.multipliedBy(skip))
-          log.warning("Job %s skipped forward %d iterations, iterations is now '%d' , modified start from '%s' to '%s"
-            .format(job.name, skip, newRecurrences, schedule.start.toString("YYYY-MM-DD/HH:MM/SS"),
-              newStart.toString(DateTimeFormat.fullDate)))
-          Some(new ScheduleStream(new ISO8601Schedule(newRecurrences, newStart, schedule.period), job.name, job.scheduleTimeZone))
-        }
-      }
-      //TODO: add Cron syntax here.
-      case _ => None
-    }
-  }
-
-  /**
-   * Calculates the number of skips needed to bring the job start into the future
-   */
-  protected def calculateSkips(dateTime: DateTime, jobStart: DateTime, period: Period): Int = {
-    // If the period is at least a month, we have to actually add the period to the date
-    // until it's in the future because a month-long period might have different seconds
-    if (period.getMonths >= 1) {
-      var skips = 0
-      var newDate = new DateTime(jobStart)
-      while (newDate.isBefore(dateTime)) {
-        newDate = newDate.plus(period)
-        skips += 1
-      }
-      skips
-    } else {
-      Seconds.secondsBetween(jobStart, dateTime).getSeconds / period.toStandardSeconds.getSeconds
     }
   }
 

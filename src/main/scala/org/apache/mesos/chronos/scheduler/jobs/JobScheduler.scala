@@ -91,7 +91,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       case scheduleBasedJob: ScheduleBasedJob =>
         lock.synchronized {
           if (!scheduleBasedJob.disabled) {
-            val newStreams = List(JobUtils.makeScheduleStream(scheduleBasedJob, DateTime.now(DateTimeZone.UTC)))
+            val newStreams = List(JobUtils.makeScheduleStreamForDate(scheduleBasedJob, DateTime.now(DateTimeZone.UTC)))
               .filter(_.nonEmpty).map(_.get)
             if (newStreams.nonEmpty) {
               log.info("updating ScheduleBasedJob:" + scheduleBasedJob.toString)
@@ -144,7 +144,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       }
 
       if (scheduleBasedJobs.nonEmpty) {
-        val newStreams = scheduleBasedJobs.filter(!_.disabled).map(JobUtils.makeScheduleStream(_, dateTime)).filter(_.nonEmpty).map(_.get)
+        val newStreams = scheduleBasedJobs.filter(!_.disabled).map(JobUtils.makeScheduleStreamForDate(_, dateTime)).filter(_.nonEmpty).map(_.get)
         scheduleBasedJobs.foreach({
           job =>
             jobGraph.addVertex(job)
@@ -244,7 +244,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
 
   /**
    * Takes care of follow-up actions for a finished task, i.e. update the job schedule in the persistence store or
-   * launch tasks for dependent jobs
+   * launch tasks for dependent job
    */
   def handleFinishedTask(taskStatus: TaskStatus, taskDate: Option[DateTime] = None) {
     // `taskDate` is purely for unit testing
@@ -279,10 +279,10 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       Cleanup potentially exhausted job. Note, if X tasks were fired within a short period of time (~ execution time
       of the job, the first returning Finished-task may trigger deletion of the job! This is a known limitation and
       needs some work but should only affect long running frequent finite jobs or short finite jobs with a tiny pause
-      in between 
+      in between
       */
       job match {
-        case job: ScheduleBasedJob => 
+        case job: ScheduleBasedJob =>
           val scheduleBasedJob: ScheduleBasedJob = newJob.asInstanceOf[ScheduleBasedJob]
           scheduleBasedJob.schedule match {
             case schedule: ISO8601Schedule => {

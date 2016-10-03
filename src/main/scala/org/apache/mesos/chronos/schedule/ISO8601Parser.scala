@@ -8,9 +8,9 @@ import java.util.TimeZone
 object ISO8601Parser {
   private val log = Logger.getLogger(getClass.getName)
   val iso8601ExpressionRegex = """(R[0-9]*)/(.*)/(P.*)""".r
-  
+
   def apply(input: String, timeZoneStr: String = ""): Option[ISO8601Schedule] = {
-      val iso8601ExpressionRegex(repeatStr, startStr, periodStr) = input 
+      val iso8601ExpressionRegex(repeatStr, startStr, periodStr) = input
       val timeZoneString = timeZoneStr match {
         case "" => "UTC"
         case _ => timeZoneStr
@@ -18,12 +18,13 @@ object ISO8601Parser {
       val recurrences: Long = repeatStr.length match {
         case 1 => -1L
         case _ => repeatStr.substring(1).toLong
-      }   
-      val start: Option[DateTime] = startStr match { 
-        case "" => Some(DateTime.now(DateTimeZone.UTC)) 
-        case _ => WithTimeZoneConsidered(DateTime.parse(startStr), timeZoneString)
       }
+      //TODO: deal with no period provided?
       val period: Period = ISOPeriodFormat.standard.parsePeriod(periodStr)
-      start.map(dateTime => new ISO8601Schedule(recurrences, dateTime, period))      
+      val start: DateTime = startStr match {
+        case "" => DateTime.now(DateTimeZone.UTC)
+        case _ => DateTime.parse(startStr)
+      }
+      WithTimeZoneConsidered(new ISO8601Schedule(recurrences, start, period), timeZoneString)
   }
 }
