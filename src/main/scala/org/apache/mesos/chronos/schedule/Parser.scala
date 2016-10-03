@@ -5,7 +5,11 @@ import java.util.logging.Logger
 import org.joda.time.format.ISOPeriodFormat
 import java.util.TimeZone
 
-object ISO8601Parser {
+trait Parser {
+  def apply(input: String, timeZoneStr: String = ""): Option[Schedule]
+}
+
+object ISO8601Parser extends Parser{
   private val log = Logger.getLogger(getClass.getName)
   val iso8601ExpressionRegex = """(R[0-9]*)/(.*)/(P.*)""".r
 
@@ -26,5 +30,11 @@ object ISO8601Parser {
         case _ => DateTime.parse(startStr)
       }
       WithTimeZoneConsidered(new ISO8601Schedule(recurrences, start, period), timeZoneString)
+  }
+}
+
+object ParserForSchedule {
+  def apply(input: String): Option[Parser] = {
+    Some(ISO8601Parser)
   }
 }
