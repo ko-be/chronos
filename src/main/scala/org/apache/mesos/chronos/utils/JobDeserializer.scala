@@ -12,7 +12,7 @@ import org.joda.time.Period
 
 import scala.collection.JavaConversions._
 import scala.util.Try
-import org.apache.mesos.chronos.schedule.ISO8601Parser
+import org.apache.mesos.chronos.schedule.{ParserForSchedule,ISO8601Parser}
 
 object JobDeserializer {
   var config: SchedulerConfiguration = _
@@ -230,8 +230,9 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         arguments = arguments, softError = softError, dataProcessingJobType = dataProcessingJobType,
         constraints = constraints)
     } else if (node.has("schedule")) {
+      val schedule = node.get("schedule").asText
       val scheduleTimeZone = if (node.has("scheduleTimeZone")) node.get("scheduleTimeZone").asText else "GMT"
-      val parsedSchedule = ISO8601Parser(node.get("schedule").asText, scheduleTimeZone)
+      val parsedSchedule = ParserForSchedule(schedule).flatMap(parser => parser(schedule, scheduleTimeZone))
       val deserializedJob = parsedSchedule.map(schedule => new ScheduleBasedJob(schedule, name = name, command = command,
         epsilon = epsilon, successCount = successCount, errorCount = errorCount, executor = executor,
         executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner, ownerName = ownerName,
