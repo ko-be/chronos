@@ -5,29 +5,7 @@ import java.util.TimeZone
 import org.joda.time.{DateTime, DateTimeZone, Period, Seconds}
 import org.joda.time.format.ISODateTimeFormat
 
-class ISO8601Schedule(val recurrences: Long, val start: DateTime, val period: Period) extends Schedule with Equals {
-
-  def canEqual(other: Any) = {
-    other.isInstanceOf[org.apache.mesos.chronos.schedule.ISO8601Schedule]
-  }
-
-  override def equals(other: Any) = {
-    other match {
-      case that: ISO8601Schedule => {
-        that.canEqual(ISO8601Schedule.this) &&
-        recurrences == that.recurrences &&
-        start == that.start &&
-        period == that.period
-      }
-      case _ => false
-    }
-  }
-
-  override def hashCode() = {
-    val prime = 41
-    prime * (prime * (prime + recurrences.hashCode) + start.hashCode) + period.hashCode
-  }
-
+case class ISO8601Schedule(val recurrences: Long, val start: DateTime, val period: Period) extends Schedule {
   override def toString() = {
     "R%s/%s/%s".format(if(recurrences > 0) recurrences.toString else "", ISODateTimeFormat.dateTime.print(start), period.toString())
   }
