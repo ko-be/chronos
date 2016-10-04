@@ -1,3 +1,7 @@
 package org.apache.mesos.chronos.schedule
 
-case class CronSchedule() extends Schedule {}
+import org.joda.time.DateTime
+
+case class CronSchedule (val start: DateTime) extends Schedule {
+  val recurrences = -1.toLong
+}
