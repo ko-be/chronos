@@ -201,48 +201,52 @@ class MesosJobFramework @Inject()(
 
   @Override
   def statusUpdate(schedulerDriver: SchedulerDriver, taskStatus: TaskStatus) {
-    taskManager.taskCache.put(taskStatus.getTaskId.getValue, taskStatus.getState)
+    if(TaskUtils.isValidVersion(taskStatus.getTaskId.getValue)) {
+      val taskId = taskStatus.getTaskId.getValue
+      val state = taskStatus.getState
+      taskManager.taskCache.put(taskId, state)
+      val (jobName, _, _, _) = TaskUtils.parseTaskId(taskStatus.getTaskId.getValue)
+      taskStatus.getState match {
+        case TaskState.TASK_RUNNING =>
+          scheduler.handleStartedTask(taskStatus)
+          updateRunningTask(jobName, taskStatus)
+        case TaskState.TASK_STAGING =>
+          scheduler.handleStartedTask(taskStatus)
+          updateRunningTask(jobName, taskStatus)
+        case _ =>
+          runningTasks.remove(jobName)
+      }
 
-    val (jobName, _, _, _) = TaskUtils.parseTaskId(taskStatus.getTaskId.getValue)
-    taskStatus.getState match {
-      case TaskState.TASK_RUNNING =>
-        scheduler.handleStartedTask(taskStatus)
-        updateRunningTask(jobName, taskStatus)
-      case TaskState.TASK_STAGING =>
-        scheduler.handleStartedTask(taskStatus)
-        updateRunningTask(jobName, taskStatus)
-      case _ =>
-        runningTasks.remove(jobName)
+      //TOOD(FL): Add statistics for jobs
+      taskStatus.getState match {
+        case TaskState.TASK_FINISHED =>
+          log.info("Task with id '%s' FINISHED".format(taskStatus.getTaskId.getValue))
+          //This is a workaround to support async jobs without having to keep yet more state.
+          if (scheduler.isTaskAsync(taskStatus.getTaskId.getValue)) {
+            log.info("Asynchronous task: '%s', not updating job-graph.".format(taskStatus.getTaskId.getValue))
+          } else {
+            scheduler.handleFinishedTask(taskStatus)
+          }
+        case TaskState.TASK_FAILED =>
+          log.info("Task with id '%s' FAILED".format(taskStatus.getTaskId.getValue))
+          scheduler.handleFailedTask(taskStatus)
+        case TaskState.TASK_LOST =>
+          log.info("Task with id '%s' LOST".format(taskStatus.getTaskId.getValue))
+          scheduler.handleFailedTask(taskStatus)
+        case TaskState.TASK_RUNNING =>
+          log.info("Task with id '%s' RUNNING. Removing persistence task.".format(taskStatus.getTaskId.getValue))
+          taskManager.removeTask(taskStatus.getTaskId.getValue)
+        case TaskState.TASK_KILLED =>
+          log.info("Task with id '%s' KILLED.".format(taskStatus.getTaskId.getValue))
+          scheduler.handleKilledTask(taskStatus)
+        case _ =>
+          log.warning("Unknown TaskState:" + taskStatus.getState + " for task: " + taskStatus.getTaskId.getValue)
+      }
+      // Perform a reconciliation, if needed.
+      reconcile(schedulerDriver)
+    } else {
+      log.info("Received StatusUpdate for task with id %s. Likely https://issues.apache.org/jira/browse/MESOS-4084")
     }
-
-    //TOOD(FL): Add statistics for jobs
-    taskStatus.getState match {
-      case TaskState.TASK_FINISHED =>
-        log.info("Task with id '%s' FINISHED".format(taskStatus.getTaskId.getValue))
-        //This is a workaround to support async jobs without having to keep yet more state.
-        if (scheduler.isTaskAsync(taskStatus.getTaskId.getValue)) {
-          log.info("Asynchronous task: '%s', not updating job-graph.".format(taskStatus.getTaskId.getValue))
-        } else {
-          scheduler.handleFinishedTask(taskStatus)
-        }
-      case TaskState.TASK_FAILED =>
-        log.info("Task with id '%s' FAILED".format(taskStatus.getTaskId.getValue))
-        scheduler.handleFailedTask(taskStatus)
-      case TaskState.TASK_LOST =>
-        log.info("Task with id '%s' LOST".format(taskStatus.getTaskId.getValue))
-        scheduler.handleFailedTask(taskStatus)
-      case TaskState.TASK_RUNNING =>
-        log.info("Task with id '%s' RUNNING. Removing persistence task.".format(taskStatus.getTaskId.getValue))
-        taskManager.removeTask(taskStatus.getTaskId.getValue)
-      case TaskState.TASK_KILLED =>
-        log.info("Task with id '%s' KILLED.".format(taskStatus.getTaskId.getValue))
-        scheduler.handleKilledTask(taskStatus)
-      case _ =>
-        log.warning("Unknown TaskState:" + taskStatus.getState + " for task: " + taskStatus.getTaskId.getValue)
-    }
-
-    // Perform a reconciliation, if needed.
-    reconcile(schedulerDriver)
   }
 
   def updateRunningTask(jobName: String, taskStatus: TaskStatus): Unit = {

@@ -2,11 +2,12 @@ package org.apache.mesos.chronos.scheduler.mesos
 
 import mesosphere.mesos.protos._
 import mesosphere.mesos.util.FrameworkIdUtil
+import com.google.common.cache.Cache
 import org.apache.mesos.Protos.Offer
 import org.apache.mesos.chronos.ChronosTestHelper._
 import org.apache.mesos.chronos.scheduler.jobs.{ BaseJob, JobScheduler, TaskManager }
 import org.apache.mesos.{ Protos, SchedulerDriver }
-import org.mockito.Mockito.{ doNothing, doReturn }
+import org.mockito.Mockito._
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationWithJUnit
 
@@ -150,5 +151,33 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
       .addResources(ScalarResource(Resource.MEM, 100, "*"))
       .addResources(ScalarResource(Resource.DISK, 100, "*"))
       .build()
+  }
+
+  "Ignore invalid status updates about tasks we don't understand" in {
+    import mesosphere.mesos.protos.Implicits._
+    import scala.collection.JavaConverters._
+
+    val taskManager = mock[TaskManager]
+
+    val taskCache = mock[Cache[String, Protos.TaskState]]
+    doNothing.when(taskCache).put(any, any)
+
+    taskManager.taskCache returns taskCache
+
+    val mesosDriverFactory = mock[MesosDriverFactory]
+    val schedulerDriver = mock[SchedulerDriver]
+    mesosDriverFactory.get().returns(schedulerDriver)
+
+    val mesosJobFramework = spy(
+      new MesosJobFramework(
+        mesosDriverFactory,
+        mock[JobScheduler],
+        taskManager,
+        makeConfig("--decline_offer_duration", "3000"),
+        mock[FrameworkIdUtil],
+        mock[MesosTaskBuilder],
+        mock[MesosOfferReviver]))
+    val status = Protos.TaskStatus.newBuilder().setTaskId(Protos.TaskID.newBuilder().setValue("BLAHBLAHBLAH")).setState(Protos.TaskState.TASK_RUNNING).build()
+    mesosJobFramework.statusUpdate(schedulerDriver, status) must not(throwA[MatchError])
   }
 }
