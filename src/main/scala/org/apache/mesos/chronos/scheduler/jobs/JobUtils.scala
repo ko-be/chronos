@@ -103,6 +103,14 @@ object JobUtils {
     }
   }
 
+  /**
+   * Given a schedule stream, return a new ScheduleStream in which the head of the stream
+   * is a job which is adjusted for the given start date. That is, the recurrences in its
+   * schedule will be reduced according to the number of skips between the current start date
+   * and that provided by the datetime parameter. Of course, in the case that the new datetime
+   * is sufficiently far in the future for the job to have no more runs left, the schedulestream
+   * will have no job at its head.
+   */
   def makeScheduleStreamForDate(job: ScheduleBasedJob, dateTime: DateTime): Option[ScheduleStream] = {
     job.schedule match {
       case schedule: ISO8601Schedule => {
@@ -112,9 +120,9 @@ object JobUtils {
           Some(new ScheduleStream(job.schedule, job.name, job.scheduleTimeZone))
         }
       }
-      //TODO: add cron support
-      case _ =>
-        None
+      case schedule: CronSchedule => {
+          Some(new ScheduleStream(job.schedule, job.name, job.scheduleTimeZone))
+      }
     }
   }
 
