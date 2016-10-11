@@ -5,12 +5,6 @@ import java.util.TimeZone
 import org.joda.time.{DateTime, DateTimeZone, Period, Seconds}
 import org.joda.time.format.ISODateTimeFormat
 
-case class ISO8601Schedule(val recurrences: Long, val start: DateTime, val period: Period) extends Schedule {
-  override def toString() = {
-    "R%s/%s/%s".format(if(recurrences > 0) recurrences.toString else "", ISODateTimeFormat.dateTime.print(start), period.toString())
-  }
-}
-
 object WithTimeZoneConsidered extends ((ISO8601Schedule, String) => Option[ISO8601Schedule]) {
   def apply(schedule: ISO8601Schedule, timeZoneString: String): Option[ISO8601Schedule] = {
     //if the timezone is invalid, this just returns UTC/GMT,
