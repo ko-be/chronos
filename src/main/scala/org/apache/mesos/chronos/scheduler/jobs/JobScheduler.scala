@@ -295,6 +295,9 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
             }
             case _ =>
           }
+        //nothing to do for dependent jobs here
+        case _ =>
+
       }
     }
   }
