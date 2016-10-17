@@ -35,7 +35,6 @@ class ZookeeperModule(val config: SchedulerConfiguration with HttpConf)
       .connectString(validateZkServers())
       .retryPolicy(new ExponentialBackoffRetry(1000, 10))
       .build()
-
     curator.start()
     log.info("Connecting to ZK...")
     curator.blockUntilConnected()

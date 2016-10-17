@@ -334,7 +334,7 @@ class JobStats @Inject()(clusterBuilder: Option[Cluster.Builder], config: Cassan
     var jobParents:Option[java.util.Set[String]] = None
     job match {
       case job: ScheduleBasedJob =>
-        jobSchedule = Some(job.schedule)
+        jobSchedule = Some(job.schedule.toString())
       case job: DependencyBasedJob =>
         jobParents = Some(job.parents.asJava)
     }
@@ -434,7 +434,7 @@ class JobStats @Inject()(clusterBuilder: Option[Cluster.Builder], config: Cassan
     var jobParents:Option[java.util.Set[String]] = None
     job match {
       case job: ScheduleBasedJob =>
-        jobSchedule = Some(job.schedule)
+        jobSchedule = Some(job.schedule.toString())
       case job: DependencyBasedJob =>
         jobParents = Some(job.parents.asJava)
     }
@@ -455,7 +455,7 @@ class JobStats @Inject()(clusterBuilder: Option[Cluster.Builder], config: Cassan
   private def jobFailed(jobNameOrJob: Either[String, BaseJob], taskStatus: TaskStatus, attempt: Int): Unit = {
     val jobName = jobNameOrJob.fold(name => name, _.name)
     val jobSchedule = jobNameOrJob.fold(_ => None,  {
-      case job: ScheduleBasedJob => Some(job.schedule)
+      case job: ScheduleBasedJob => Some(job.schedule.toString)
       case _ => None
     })
     val jobParents: Option[java.util.Set[String]] = jobNameOrJob.fold(_ => None, {
@@ -463,6 +463,7 @@ class JobStats @Inject()(clusterBuilder: Option[Cluster.Builder], config: Cassan
       case _ => None
     })
 
+    //TODO: FIXME
     updateJobState(jobName, CurrentState.idle)
     insertToStatTable(
       id=Some(taskStatus.getTaskId.getValue),

@@ -12,6 +12,7 @@ import org.joda.time.Period
 
 import scala.collection.JavaConversions._
 import scala.util.Try
+import org.apache.mesos.chronos.schedule.{ParserForSchedule,ISO8601Parser}
 
 object JobDeserializer {
   var config: SchedulerConfiguration = _
@@ -229,8 +230,10 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         arguments = arguments, softError = softError, dataProcessingJobType = dataProcessingJobType,
         constraints = constraints)
     } else if (node.has("schedule")) {
-      val scheduleTimeZone = if (node.has("scheduleTimeZone")) node.get("scheduleTimeZone").asText else ""
-      new ScheduleBasedJob(node.get("schedule").asText, name = name, command = command,
+      val schedule = node.get("schedule").asText
+      val scheduleTimeZone = if (node.has("scheduleTimeZone")) node.get("scheduleTimeZone").asText else "GMT"
+      val parsedSchedule = ParserForSchedule(schedule).flatMap(parser => parser(schedule, scheduleTimeZone))
+      val deserializedJob = parsedSchedule.map(schedule => new ScheduleBasedJob(schedule, name = name, command = command,
         epsilon = epsilon, successCount = successCount, errorCount = errorCount, executor = executor,
         executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner, ownerName = ownerName,
         description = description, lastError = lastError, lastSuccess = lastSuccess, async = async,
@@ -238,17 +241,25 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         errorsSinceLastSuccess = errorsSinceLastSuccess, fetch = fetch, uris = uris,  highPriority = highPriority,
         runAsUser = runAsUser, container = container, scheduleTimeZone = scheduleTimeZone,
         environmentVariables = environmentVariables, shell = shell, arguments = arguments, softError = softError,
-        dataProcessingJobType = dataProcessingJobType, constraints = constraints)
+        dataProcessingJobType = dataProcessingJobType, constraints = constraints))
+       deserializedJob match {
+        case Some(job) => job
+        case None => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s".format(node.get("schedule").asText, scheduleTimeZone))
+      }
     } else {
       /* schedule now */
-      new ScheduleBasedJob("R1//PT24H", name = name, command = command, epsilon = epsilon, successCount = successCount,
+      val job = ISO8601Parser("R1//PT24H", "GMT").map(schedule => new ScheduleBasedJob(schedule, name = name, command = command, epsilon = epsilon, successCount = successCount,
         errorCount = errorCount, executor = executor, executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner,
         ownerName = ownerName, description = description, lastError = lastError, lastSuccess = lastSuccess,
         async = async, cpus = cpus, disk = disk, mem = mem, disabled = disabled,
         errorsSinceLastSuccess = errorsSinceLastSuccess, fetch = fetch, uris = uris,  highPriority = highPriority,
         runAsUser = runAsUser, container = container, environmentVariables = environmentVariables, shell = shell,
         arguments = arguments, softError = softError, dataProcessingJobType = dataProcessingJobType,
-        constraints = constraints)
+        constraints = constraints))
+      job match {
+        case Some(job) => job
+        case None => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s".format(node.get("schedule").asText, "GMT"))
+      }
     }
   }
 }

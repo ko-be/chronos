@@ -1,6 +1,7 @@
 package org.apache.mesos.chronos.scheduler.state
 
 import org.apache.mesos.chronos.scheduler.jobs._
+import org.apache.mesos.chronos.schedule.ISO8601Parser
 import org.joda.time.Hours
 import org.specs2.mock._
 import org.specs2.mutable._
@@ -11,7 +12,7 @@ class PersistenceStoreSpec extends SpecificationWithJUnit with Mockito {
 
     "Writing and reading ScheduledBasedJob a job works" in {
       val store = new MesosStatePersistenceStore(null, null)
-      val startTime = "R1/2012-01-01T00:00:01.000Z/PT1M"
+      val startTime = ISO8601Parser("R1/2012-01-01T00:00:01.000Z/PT1M").get
       val job = new ScheduleBasedJob(schedule = startTime, name = "sample-name",
         command = "sample-command", successCount = 1L, epsilon = Hours.hours(1).toPeriod,
         executor = "fooexecutor", executorFlags = "args", taskInfoData = "SomeData")
@@ -29,7 +30,7 @@ class PersistenceStoreSpec extends SpecificationWithJUnit with Mockito {
 
     "Writing and reading DependencyBasedJob a job works" in {
       val store = new MesosStatePersistenceStore(null, null)
-      val startTime = "R1/2012-01-01T00:00:01.000Z/PT1M"
+      val startTime = ISO8601Parser("R1/2012-01-01T00:00:01.000Z/PT1M").get
       val epsilon = Hours.hours(1).toPeriod
       val schedJob = new ScheduleBasedJob(schedule = startTime, name = "sample-name",
         command = "sample-command", epsilon = epsilon)
