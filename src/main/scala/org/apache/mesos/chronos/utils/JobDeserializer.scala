@@ -231,7 +231,7 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         constraints = constraints)
     } else if (node.has("schedule")) {
       val schedule = node.get("schedule").asText
-      val scheduleTimeZone = if (node.has("scheduleTimeZone") && !node.get("scheduleTimeZone").isNull) {
+      val scheduleTimeZone = if (node.has("scheduleTimeZone") && !node.get("scheduleTimeZone").isNull && node.get("scheduleTimeZone").asText != "null") {
         node.get("scheduleTimeZone").asText
       } else "UTC"
       val parsedSchedule = ParserForSchedule(schedule).flatMap(parser => parser(schedule, scheduleTimeZone))
