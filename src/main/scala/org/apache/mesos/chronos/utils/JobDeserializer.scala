@@ -231,7 +231,9 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         constraints = constraints)
     } else if (node.has("schedule")) {
       val schedule = node.get("schedule").asText
-      val scheduleTimeZone = if (node.has("scheduleTimeZone")) node.get("scheduleTimeZone").asText else "GMT"
+      val scheduleTimeZone = if (node.has("scheduleTimeZone") && !node.get("scheduleTimeZone").isNull) {
+        node.get("scheduleTimeZone").asText
+      } else "UTC"
       val parsedSchedule = ParserForSchedule(schedule).flatMap(parser => parser(schedule, scheduleTimeZone))
       val deserializedJob = parsedSchedule.map(schedule => new ScheduleBasedJob(schedule, name = name, command = command,
         epsilon = epsilon, successCount = successCount, errorCount = errorCount, executor = executor,
@@ -244,11 +246,11 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         dataProcessingJobType = dataProcessingJobType, constraints = constraints))
        deserializedJob match {
         case Some(job) => job
-        case None => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s".format(node.get("schedule").asText, scheduleTimeZone))
+        case None => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s for job %s".format(node.get("schedule").asText, scheduleTimeZone, name))
       }
     } else {
       /* schedule now */
-      val job = ISO8601Parser("R1//PT24H", "GMT").map(schedule => new ScheduleBasedJob(schedule, name = name, command = command, epsilon = epsilon, successCount = successCount,
+      val job = ISO8601Parser("R1//PT24H", "UTC").map(schedule => new ScheduleBasedJob(schedule, name = name, command = command, epsilon = epsilon, successCount = successCount,
         errorCount = errorCount, executor = executor, executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner,
         ownerName = ownerName, description = description, lastError = lastError, lastSuccess = lastSuccess,
         async = async, cpus = cpus, disk = disk, mem = mem, disabled = disabled,
@@ -258,7 +260,7 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         constraints = constraints))
       job match {
         case Some(job) => job
-        case None => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s".format(node.get("schedule").asText, "GMT"))
+        case None => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s".format(node.get("schedule").asText, "UTC"))
       }
     }
   }
