@@ -111,17 +111,17 @@ object JobUtils {
    * is sufficiently far in the future for the job to have no more runs left, the schedulestream
    * will have no job at its head.
    */
-  def makeScheduleStreamForDate(job: ScheduleBasedJob, dateTime: DateTime): Option[ScheduleStream] = {
+  def makeScheduleStreamForDate(job: ScheduleBasedJob, dateTime: DateTime): Option[ScheduleStream[Any]] = {
     job.schedule match {
       case schedule: ISO8601Schedule => {
         if(schedule.start.plus(job.epsilon).isBefore(dateTime)) {
-          AdjustedForStartDate(schedule, dateTime).map(schedule => new ScheduleStream(schedule, job.name, job.scheduleTimeZone))
+          AdjustedForStartDate(schedule, dateTime).map(schedule => new ScheduleStream[ISO8601Schedule](schedule, job.name, job.scheduleTimeZone))
         } else {
           Some(new ScheduleStream(job.schedule, job.name, job.scheduleTimeZone))
         }
       }
       case schedule: CronSchedule => {
-          Some(new ScheduleStream(job.schedule, job.name, job.scheduleTimeZone))
+          Some(new ScheduleStream[CronSchedule](job.schedule, job.name, job.scheduleTimeZone))
       }
     }
   }

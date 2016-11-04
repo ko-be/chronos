@@ -1,6 +1,9 @@
 package org.apache.mesos.chronos.schedule
 
-import org.joda.time.{DateTime, Period}
+import java.time.ZonedDateTime
+
+import com.cronutils.model.time.ExecutionTime
+import org.joda.time.{DateTime, DateTimeZone, Period}
 import org.joda.time.format.ISODateTimeFormat
 
 sealed trait Schedule {
@@ -14,6 +17,31 @@ final case class ISO8601Schedule(val recurrences: Long, val start: DateTime, val
   }
 }
 
-final case class CronSchedule (val start: DateTime) extends Schedule {
+final case class CronSchedule (val start: DateTime, executionTime: ExecutionTime) extends Schedule {
   val recurrences = -1.toLong
+}
+
+object Scheduling {
+  trait Nextable[T] {
+    def next(current: T): Option[T]
+  }
+
+  object Nextable {
+    implicit object NextableCron extends Nextable[CronSchedule] {
+      def next(current: CronSchedule): Option[CronSchedule] = {
+        val dateForNextRun = current.executionTime.nextExecution(ZonedDateTime.now)
+        Some(new CronSchedule(new DateTime(dateForNextRun.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")), current.executionTime))
+      }
+    }
+    implicit object NextableISO8601 extends Nextable[ISO8601Schedule] {
+      def next(current: ISO8601Schedule): Option[ISO8601Schedule] = {
+        current.recurrences match {
+          case -1 => Some(new ISO8601Schedule(current.recurrences, current.start.plus(current.period), current.period))
+          case 0 => None
+          case _ => Some(new ISO8601Schedule(current.recurrences - 1, current.start.plus(current.period), current.period))
+        }
+      }
+    }
+  }
+
 }

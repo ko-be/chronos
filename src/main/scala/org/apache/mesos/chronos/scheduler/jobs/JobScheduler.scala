@@ -55,7 +55,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   val running = new AtomicBoolean(false)
   val leader = new AtomicBoolean(false)
   private[this] val log = Logger.getLogger(getClass.getName)
-  var streams: List[ScheduleStream] = List()
+  var streams: List[ScheduleStream[Any]] = List()
 
   def isLeader: Boolean = leader.get()
 
@@ -481,7 +481,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
    * @param schedules schedules to be processed
    * @return list of updated schedules
    */
-  def iteration(dateTime: DateTime, schedules: List[ScheduleStream]): List[ScheduleStream] = {
+  def iteration(dateTime: DateTime, schedules: List[ScheduleStream[Any]]): List[ScheduleStream[Any]] = {
     log.info("Checking schedules with time horizon:%s".format(scheduleHorizon.toString))
     removeOldSchedules(schedules.map(s => scheduleStream(dateTime, s)))
   }

@@ -1,0 +1,35 @@
+package org.apache.mesos.chronos.scheduler.api
+
+import mesosphere.mesos.util.FrameworkIdUtil
+import mesosphere.mesos.util.FrameworkID
+import org.apache.curator.framework.recipes.leader.{LeaderLatch, Participant}
+import org.apache.mesos.chronos.scheduler.config.SchedulerConfiguration
+import javax.ws.rs.core.Response.Status
+import org.specs2.mutable.{SpecificationWithJUnit}
+import org.specs2.mock._
+import org.specs2.specification.Scope
+import org.apache.mesos.chronos.ChronosTestHelper
+import org.mockito.Mockito._
+
+class InfoResourceSpec extends SpecificationWithJUnit with Mockito {
+  "InfoResource" should {
+    "Return the expected keys in the JSON" in {
+        val fixture = new Fixture
+        val resource = fixture.infoResource()
+        val response = resource.info()
+        response.getStatus should be equalTo(200)
+     }
+   }
+
+   class Fixture {
+        val frameworkId = FrameworkID.newBuilder
+            .setValue("some_id")
+            .build()
+        val schedulerConfiguration = ChronosTestHelper.makeConfig()
+        val frameworkIdUtil = mock[FrameworkIdUtil]
+        when(frameworkIdUtil.fetch()).thenReturn frameworkId
+        frameworkIdUtil.fetch = frameworkId
+        val leaderLatch = mock[LeaderLatch]
+        def infoResource() = new InfoResource(schedulerConfiguration, frameworkIdUtil, leaderLatch)
+    }
+}
