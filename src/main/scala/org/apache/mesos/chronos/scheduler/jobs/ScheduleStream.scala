@@ -4,7 +4,7 @@ import org.apache.mesos.chronos.schedule.Scheduling.Nextable
 
 /**
  * A stream of schedules.
- * Calling tail will return a clipped schedule.
+ * Calling tail will return an Option[ScheduleStream], where the job at the head of the stream contains the next run.
  * Each unit in the stream consists of a Schedule, a job name, and a schedule Time Zone (TODO: remove schedule time zone)
  * @author Florian Leibert (flo@leibert.de)
  */
