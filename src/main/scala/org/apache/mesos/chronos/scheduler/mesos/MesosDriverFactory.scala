@@ -24,6 +24,8 @@ class MesosDriverFactory(
   var mesosDriver: Option[SchedulerDriver] = None
 
   def start(): Unit = {
+    log.info("STARTING MESOS DRIVER")
+    log.info("scheduler IS A %s".format(scheduler.getClass))
     val status = get().start()
     if (status != Status.DRIVER_RUNNING) {
       log.severe(s"MesosSchedulerDriver start resulted in status: $status. Committing suicide!")
@@ -39,6 +41,8 @@ class MesosDriverFactory(
   }
 
   def close(): Unit = {
+    log.info("STOPPING MESOS DRIVER")
+    log.info("CURRENT MESOS DRIVER: %s".format(mesosDriver.get))
     assert(mesosDriver.nonEmpty, "Attempted to close a non initialized driver")
     if (mesosDriver.isEmpty) {
       log.severe("Attempted to close a non initialized driver")
@@ -47,6 +51,8 @@ class MesosDriverFactory(
 
     mesosDriver.get.stop(true)
     mesosDriver = None
+    log.info("STOPPED MESOS DRIVER")
+    log.info("Mesos Driver: %s".format(mesosDriver))
   }
 
   private[this] def makeDriver(): SchedulerDriver = {

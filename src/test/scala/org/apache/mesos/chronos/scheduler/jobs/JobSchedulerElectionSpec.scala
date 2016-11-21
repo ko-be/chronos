@@ -15,9 +15,10 @@ import org.junit.Assert.{assertFalse, assertTrue}
 import org.junit.Test
 import org.mockito.Mockito.doNothing
 import org.specs2.mock.Mockito
+import org.specs2.mutable.SpecificationWithJUnit
+import org.apache.mesos.chronos.ExitDisabledTest
 
-class JobSchedulerElectionSpec
-  extends Mockito {
+class RichRuntimeSpec extends SpecificationWithJUnit with ExitDisabledTest with Mockito{
   var port = 8080
 
   @Test
