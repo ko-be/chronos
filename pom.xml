@@ -25,7 +25,7 @@
     <scala.abi>2.11.2</scala.abi>
 
     <!-- runtime deps versions -->
-    <akka.version>2.3.6</akka.version>
+    <akka.version> 2.4.12</akka.version>
     <cassandra-driver-core.version>2.1.0</cassandra-driver-core.version>
     <chaos.version>0.6.3</chaos.version>
     <commons-math3.version>3.2</commons-math3.version>

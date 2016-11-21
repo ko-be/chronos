@@ -45,6 +45,7 @@ class MesosJobFramework @Inject()(
 
     log.info("Registered with ID: " + frameworkID.getValue)
     log.info("Master info:" + masterInfo.toString)
+    log.info("RUNNING TASKS: %s".format(runningTasks.toString))
     frameworkIdUtil.store(frameworkID)
     mesosOfferReviver.reviveOffers()
   }
@@ -201,6 +202,8 @@ class MesosJobFramework @Inject()(
 
   @Override
   def statusUpdate(schedulerDriver: SchedulerDriver, taskStatus: TaskStatus) {
+    log.info("Got status update: reason: %s state: %s message:".format(taskStatus.getReason, taskStatus.getState, taskStatus.getMessage))
+
     val taskId = taskStatus.getTaskId.getValue
     val state = taskStatus.getState
     if(TaskUtils.isValidVersion(taskId)) {

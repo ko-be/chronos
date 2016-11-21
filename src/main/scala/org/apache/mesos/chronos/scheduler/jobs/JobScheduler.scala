@@ -5,6 +5,7 @@ import java.util.concurrent.{TimeUnit, Executors, Future}
 import java.util.logging.{Level, Logger}
 
 import akka.actor.ActorSystem
+import org.apache.mesos.chronos.core.RichRuntime
 import org.apache.mesos.chronos.scheduler.graph.JobGraph
 import org.apache.mesos.chronos.scheduler.mesos.MesosDriverFactory
 import org.apache.mesos.chronos.scheduler.state.PersistenceStore
@@ -609,10 +610,12 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
 
   //Begin Leader interface, which is required for CandidateImpl.
   def onDefeated() {
-    mesosDriver.close()
-
-    log.info("Defeated. Not the current leader.")
+    import scala.concurrent.ExecutionContext.Implicits.global
+    log.info("Defeated. Not the current leader. Shutting down.")
     running.set(false)
+    val runtime = RichRuntime()
+    runtime.asyncExit()
+
     jobGraph.reset() // So we can rebuild it later.
     schedulerThreadFuture.get.cancel(true)
   }
