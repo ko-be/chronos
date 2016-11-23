@@ -19,6 +19,7 @@ import org.joda.time.{DateTime, DateTimeZone, Duration, Period}
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
 import org.apache.mesos.chronos.schedule.{CronSchedule, Schedule, ISO8601Schedule}
 
 /**
@@ -610,7 +611,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
 
   //Begin Leader interface, which is required for CandidateImpl.
   def onDefeated() {
-    import scala.concurrent.ExecutionContext.Implicits.global
+    implicit val exitExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
     log.info("Defeated. Not the current leader. Shutting down.")
     running.set(false)
     val runtime = RichRuntime()
