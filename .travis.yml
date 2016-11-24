@@ -9,6 +9,9 @@ sudo: required
 services:
   - docker
 script: if [[ -n "$MAKE_TARGET" ]]; then make "$MAKE_TARGET"; fi
+language: java
+jdk:
+  - oraclejdk8
 cache:
   directories:
     - $HOME/.m2/repository
