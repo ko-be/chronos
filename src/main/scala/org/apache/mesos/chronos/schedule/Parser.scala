@@ -45,7 +45,7 @@ object CronParser extends Parser {
   def apply(input: String, timeZoneStr: String = ""): Option[CronSchedule] = {
     val unixCronParser =  new CronUtilsParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX))
     val cron = Try(unixCronParser.parse(input))
-    val cronExpression = Try(unixCronParser.parse(input)).map {
+    val cronExpression = cron.map {
       parsed => {
         ExecutionTime.forCron(parsed)
       }
@@ -59,7 +59,7 @@ object CronParser extends Parser {
       zdt => new DateTime(zdt.toInstant().toEpochMilli(), DateTimeZone.forID("UTC"))
     }
     dateForNextRun match {
-      case Success(dateForNextRun) => Some(new CronSchedule(dateForNextRun, cron.get, cronExpression.get))
+      case Success(dateForNextRun) => Some(new CronSchedule(dateForNextRun, cron.get))
       case Failure(e) => {
         None
       }
