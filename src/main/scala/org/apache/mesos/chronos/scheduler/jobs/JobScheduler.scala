@@ -55,7 +55,8 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   val running = new AtomicBoolean(false)
   val leader = new AtomicBoolean(false)
   private[this] val log = Logger.getLogger(getClass.getName)
-  var streams: List[ScheduleStream[Any]] = List()
+
+  var streams: List[ScheduleStream[Schedule]]  = List()
 
   def isLeader: Boolean = leader.get()
 
@@ -127,7 +128,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   /**
    * This method should be used to register jobs.
    */
-  def registerJob(jobs: List[BaseJob], persist: Boolean = false, dateTime: DateTime = DateTime.now(DateTimeZone.UTC)) {
+  def registerJob(jobs: List[BaseJob], persist: Boolean = false, dateTime: DateTime = DateTime.now(DateTimeZone.UTC)) = {
     lock.synchronized {
       require(isLeader, "Cannot register a job with this scheduler, not the leader!")
       val scheduleBasedJobs = ListBuffer[ScheduleBasedJob]()
@@ -481,7 +482,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
    * @param schedules schedules to be processed
    * @return list of updated schedules
    */
-  def iteration(dateTime: DateTime, schedules: List[ScheduleStream[Any]]): List[ScheduleStream[Any]] = {
+  def iteration[T <: Schedule](dateTime: DateTime, schedules: List[ScheduleStream[T]]): List[ScheduleStream[T]] = {
     log.info("Checking schedules with time horizon:%s".format(scheduleHorizon.toString))
     removeOldSchedules(schedules.map(s => scheduleStream(dateTime, s)))
   }
@@ -501,7 +502,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   }
 
   /**
-   * Given a stream and a DateTime(@see org.joda.DateTime), this method returns a 2-tuple with a ScheduleTask and
+   * Given a ScheduleStream[T] and a DateTime(@see org.joda.DateTime), this method returns a 2-tuple with a ScheduleTask and
    * a clipped schedule stream in case that the ScheduleTask was not none. Returns no task and the input stream,
    * if nothing needs scheduling within the time horizon.
    * @param now time to start iteration with
@@ -509,7 +510,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
    * @return
    */
   @tailrec
-  final def next(now: DateTime, stream: ScheduleStream): (Option[ScheduledTask], Option[ScheduleStream]) = {
+  final def next[T <: Schedule](now: DateTime, stream: ScheduleStream[T]): (Option[ScheduledTask], Option[ScheduleStream[T]]) = {
     val (schedule, jobName, scheduleTimeZone) = stream.head
 
     log.info("Calling next for stream: %s, jobname: %s".format(stream.schedule, jobName))
@@ -658,7 +659,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   // This schedule stream will generate *and schedule* all tasks for a given job that fall
   // inside of the schedule Horizon.
   @tailrec
-  private final def scheduleStream(now: DateTime, s: ScheduleStream): Option[ScheduleStream] = {
+  private final def scheduleStream[T <: Schedule](now: DateTime, s: ScheduleStream[T]): Option[ScheduleStream[T]] = {
     val (taskOption, stream) = next(now, s)
     if (taskOption.isEmpty) {
       stream
@@ -710,7 +711,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
 
   //End Service interface
 
-  private def removeOldSchedules(scheduleStreams: List[Option[ScheduleStream]]): List[ScheduleStream] = {
+  private def removeOldSchedules[T <: Schedule](scheduleStreams: List[Option[ScheduleStream[T]]]): List[ScheduleStream[T]] = {
     log.fine("Filtering out empty streams")
     scheduleStreams.filter(s => s.isDefined && s.get.tail.isDefined).map(_.get)
   }
@@ -720,7 +721,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
    * @param now time from which to evaluate schedule
    * @param newStreams new schedules to be evaluated
    */
-  private def addSchedule(now: DateTime, newStreams: List[ScheduleStream]) {
+  private def addSchedule[T <: Schedule](now: DateTime, newStreams: List[ScheduleStream[Schedule]]) {
     log.info("Adding schedule for time:" + now.toString(DateTimeFormat.fullTime()))
     lock.synchronized {
       log.fine("Starting iteration")

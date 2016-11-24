@@ -7,11 +7,11 @@ import org.specs2.mock._
 import org.specs2.mutable._
 import MockJobUtils._
 import org.apache.mesos.chronos.schedule.{ISO8601Parser, ISO8601Schedule}
-  
+
 class JobSchedulerSpec extends SpecificationWithJUnit with Mockito {
 
   //TODO(FL): Write more specs for the REST framework.
-  
+
   val schedule = ISO8601Parser("R1/2012-01-01T00:00:01.000Z/PT1M").get
   "JobScheduler" should {
     "Construct a task for a given time when the schedule is within epsilon" in {
@@ -33,7 +33,6 @@ class JobSchedulerSpec extends SpecificationWithJUnit with Mockito {
       task2 must beNone
       stream2 must beNone
     }
-    
 
     "Ignore a task that has been due past epsilon" in {
       val epsilon = Minutes.minutes(1).toPeriod
@@ -47,7 +46,7 @@ class JobSchedulerSpec extends SpecificationWithJUnit with Mockito {
 
       val horizon = Minutes.minutes(10).toPeriod
       val scheduler = mockScheduler(horizon, null, mockGraph)
-      
+
       //call next with 'now' advanced to an hour after the task was due
       val (task1, stream1) = scheduler.next(new DateTime("2012-01-01T00:01:01.000Z"), singleJobStream)
       task1 must beNone
@@ -168,7 +167,6 @@ class JobSchedulerSpec extends SpecificationWithJUnit with Mockito {
       val jobName = "FOO"
       val job1 = new ScheduleBasedJob(schedule = schedule, name = jobName, command = "", epsilon = epsilon)
 
-
       val jobStream = new ScheduleStream(schedule, jobName)
 
       val horizon = Seconds.seconds(30).toPeriod
@@ -231,11 +229,11 @@ class JobSchedulerSpec extends SpecificationWithJUnit with Mockito {
     scheduler.registerJob(job1, persist = false, DateTime.parse("2012-01-01T00:00:05.000Z"))
     scheduler.registerJob(job2, persist = false, DateTime.parse("2012-01-01T00:00:10.000Z"))
 
-    val res1: List[ScheduleStream] = scheduler.iteration(DateTime.parse("2012-01-01T00:00:00.000Z"), scheduler.streams)
+    val res1 = scheduler.iteration(DateTime.parse("2012-01-01T00:00:00.000Z"), scheduler.streams)
 
     scheduler.deregisterJob(job2, persist = false)
 
-    val res2: List[ScheduleStream] = scheduler.iteration(DateTime.parse("2012-01-01T00:05:00.000Z"), scheduler.streams)
+    val res2 = scheduler.iteration(DateTime.parse("2012-01-01T00:05:00.000Z"), scheduler.streams)
     res2.size must_== 1
     res2.head.jobName must_== job1.name
   }
@@ -260,11 +258,11 @@ class JobSchedulerSpec extends SpecificationWithJUnit with Mockito {
     var stream = scheduler.iteration(startTime, List(jobStream))
     t = t.plus(Period.millis(1).toPeriod)
     stream = scheduler.iteration(t, stream)
-    
+
     //this is the job we expect to be used next (note the updated schedule)
     val newSchedule = ISO8601Parser("R/2012-01-01T00:00:01.000Z/PT1S").get
     val newJob = new ScheduleBasedJob(newSchedule, jobName, jobCmd, epsilon, 0)
-    
+
     there was one(store).persistJob(newJob)
     there was one(mockGraph).replaceVertex(job1, newJob)
   }
