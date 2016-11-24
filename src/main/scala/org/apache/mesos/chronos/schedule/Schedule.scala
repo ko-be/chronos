@@ -3,6 +3,7 @@ package org.apache.mesos.chronos.schedule
 import java.time.ZonedDateTime
 
 import com.cronutils.model.time.ExecutionTime
+import com.cronutils.model.Cron
 import org.joda.time.{DateTime, DateTimeZone, Period}
 import org.joda.time.format.ISODateTimeFormat
 
@@ -17,31 +18,32 @@ final case class ISO8601Schedule(val recurrences: Long, val start: DateTime, val
   }
 }
 
-final case class CronSchedule (val start: DateTime, executionTime: ExecutionTime) extends Schedule {
+final case class CronSchedule (val start: DateTime, val cron: Cron, executionTime: ExecutionTime) extends Schedule {
   val recurrences = -1.toLong
+
+  override def toString() = {
+    cron.asString()
+  }
 }
 
-object Scheduling {
-  trait Nextable[T] {
-    def next(current: T): Option[T]
-  }
+trait Nextable[T] {
+  def next(current: T): Option[T]
+}
 
-  object Nextable {
-    implicit object NextableCron extends Nextable[CronSchedule] {
-      def next(current: CronSchedule): Option[CronSchedule] = {
-        val dateForNextRun = current.executionTime.nextExecution(ZonedDateTime.now)
-        Some(new CronSchedule(new DateTime(dateForNextRun.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")), current.executionTime))
-      }
+object Nextable {
+  implicit object NextableCron extends Nextable[CronSchedule] {
+    def next(current: CronSchedule): Option[CronSchedule] = {
+      val dateForNextRun = current.executionTime.nextExecution(current.start.toGregorianCalendar().toZonedDateTime())
+      Some(new CronSchedule(new DateTime(dateForNextRun.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")), current.cron, current.executionTime))
     }
-    implicit object NextableISO8601 extends Nextable[ISO8601Schedule] {
-      def next(current: ISO8601Schedule): Option[ISO8601Schedule] = {
-        current.recurrences match {
-          case -1 => Some(new ISO8601Schedule(current.recurrences, current.start.plus(current.period), current.period))
-          case 0 => None
-          case _ => Some(new ISO8601Schedule(current.recurrences - 1, current.start.plus(current.period), current.period))
-        }
+  }
+  implicit object NextableISO8601 extends Nextable[ISO8601Schedule] {
+    def next(current: ISO8601Schedule): Option[ISO8601Schedule] = {
+      current.recurrences match {
+        case -1 => Some(new ISO8601Schedule(current.recurrences, current.start.plus(current.period), current.period))
+        case 0 => None
+        case _ => Some(new ISO8601Schedule(current.recurrences - 1, current.start.plus(current.period), current.period))
       }
     }
   }
-
 }
