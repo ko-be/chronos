@@ -44,6 +44,7 @@ object CronParser extends Parser {
   private val log = Logger.getLogger(getClass.getName)
   def apply(input: String, timeZoneStr: String = ""): Option[CronSchedule] = {
     val unixCronParser =  new CronUtilsParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX))
+    val cron = Try(unixCronParser.parse(input))
     val cronExpression = Try(unixCronParser.parse(input)).map {
       parsed => {
         ExecutionTime.forCron(parsed)
@@ -58,7 +59,7 @@ object CronParser extends Parser {
       zdt => new DateTime(zdt.toInstant().toEpochMilli(), DateTimeZone.forID("UTC"))
     }
     dateForNextRun match {
-      case Success(dateForNextRun) => Some(new CronSchedule(dateForNextRun, cronExpression.get))
+      case Success(dateForNextRun) => Some(new CronSchedule(dateForNextRun, cron.get, cronExpression.get))
       case Failure(e) => {
         None
       }
@@ -67,7 +68,14 @@ object CronParser extends Parser {
 }
 
 object ParserForSchedule {
+  val log = Logger.getLogger(getClass.getName)
   def apply(input: String): Option[Parser] = {
-    Some(ISO8601Parser)
+    if(ISO8601Parser.iso8601ExpressionRegex.pattern.matcher(input).matches()) {
+      log.info("ISO801 Parser!")
+      Some(ISO8601Parser)
+    } else {
+      log.info("CRON Parser!")
+      Some(CronParser)
+    }
   }
 }
