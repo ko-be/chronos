@@ -18,7 +18,7 @@ final case class ISO8601Schedule(val recurrences: Long, val start: DateTime, val
   }
 }
 
-final case class CronSchedule (val start: DateTime, val cron: Cron, executionTime: ExecutionTime) extends Schedule {
+final case class CronSchedule (val start: DateTime, val cron: Cron) extends Schedule {
   val recurrences = -1.toLong
 
   override def toString() = {
@@ -33,8 +33,9 @@ trait Nextable[T] {
 object Nextable {
   implicit object NextableCron extends Nextable[CronSchedule] {
     def next(current: CronSchedule): Option[CronSchedule] = {
-      val dateForNextRun = current.executionTime.nextExecution(current.start.toGregorianCalendar().toZonedDateTime())
-      Some(new CronSchedule(new DateTime(dateForNextRun.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")), current.cron, current.executionTime))
+      val executionTime = ExecutionTime.forCron(current.cron)
+      val dateForNextRun = executionTime.nextExecution(current.start.toGregorianCalendar().toZonedDateTime())
+      Some(new CronSchedule(new DateTime(dateForNextRun.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")), current.cron))
     }
   }
   implicit object NextableISO8601 extends Nextable[ISO8601Schedule] {
