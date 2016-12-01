@@ -71,10 +71,8 @@ object ParserForSchedule {
   val log = Logger.getLogger(getClass.getName)
   def apply(input: String): Option[Parser] = {
     if(ISO8601Parser.iso8601ExpressionRegex.pattern.matcher(input).matches()) {
-      log.info("ISO801 Parser!")
       Some(ISO8601Parser)
     } else {
-      log.info("CRON Parser!")
       Some(CronParser)
     }
   }

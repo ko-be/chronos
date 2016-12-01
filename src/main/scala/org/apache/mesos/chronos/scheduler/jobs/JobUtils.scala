@@ -85,7 +85,6 @@ object JobUtils {
 
     dependencyBasedJobs.foreach {
       x =>
-        log.info("mapping:" + x)
         import scala.collection.JavaConversions._
         log.info("Adding dependencies for %s -> [%s]".format(x.name, Joiner.on(",").join(x.parents)))
 
