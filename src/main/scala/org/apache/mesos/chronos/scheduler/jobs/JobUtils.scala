@@ -13,7 +13,7 @@ import org.joda.time.{DateTime, Period, Seconds}
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import org.apache.mesos.chronos.schedule.{ISO8601Schedule, CronSchedule, AdjustedForStartDate}
+import org.apache.mesos.chronos.schedule.{Schedule, ISO8601Schedule, CronSchedule, AdjustedForStartDate}
 
 /**
  * @author Florian Leibert (flo@leibert.de)
@@ -85,7 +85,6 @@ object JobUtils {
 
     dependencyBasedJobs.foreach {
       x =>
-        log.info("mapping:" + x)
         import scala.collection.JavaConversions._
         log.info("Adding dependencies for %s -> [%s]".format(x.name, Joiner.on(",").join(x.parents)))
 
@@ -111,17 +110,17 @@ object JobUtils {
    * is sufficiently far in the future for the job to have no more runs left, the schedulestream
    * will have no job at its head.
    */
-  def makeScheduleStreamForDate(job: ScheduleBasedJob, dateTime: DateTime): Option[ScheduleStream] = {
+  def makeScheduleStreamForDate(job: ScheduleBasedJob, dateTime: DateTime): Option[ScheduleStream[Schedule]] = {
     job.schedule match {
       case schedule: ISO8601Schedule => {
         if(schedule.start.plus(job.epsilon).isBefore(dateTime)) {
-          AdjustedForStartDate(schedule, dateTime).map(schedule => new ScheduleStream(schedule, job.name, job.scheduleTimeZone))
+          AdjustedForStartDate(schedule, dateTime).map(schedule => new ScheduleStream[ISO8601Schedule](schedule, job.name, job.scheduleTimeZone))
         } else {
-          Some(new ScheduleStream(job.schedule, job.name, job.scheduleTimeZone))
+          Some(new ScheduleStream[ISO8601Schedule](schedule, job.name, job.scheduleTimeZone))
         }
       }
       case schedule: CronSchedule => {
-          Some(new ScheduleStream(job.schedule, job.name, job.scheduleTimeZone))
+          Some(new ScheduleStream[CronSchedule](schedule, job.name, job.scheduleTimeZone))
       }
     }
   }

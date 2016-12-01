@@ -1,9 +1,16 @@
 package org.apache.mesos.chronos.schedule
 
+import scala.util.{Try, Success, Failure}
 import org.joda.time.{DateTime, DateTimeZone, Period}
 import java.util.logging.Logger
 import org.joda.time.format.ISOPeriodFormat
+import org.joda.time.DateTime
 import java.util.TimeZone
+import java.time.ZonedDateTime
+import com.cronutils.parser.{CronParser => CronUtilsParser}
+import com.cronutils.model.definition.CronDefinitionBuilder
+import com.cronutils.model.CronType
+import com.cronutils.model.time.ExecutionTime
 
 trait Parser {
   def apply(input: String, timeZoneStr: String = ""): Option[Schedule]
@@ -33,8 +40,40 @@ object ISO8601Parser extends Parser{
   }
 }
 
+object CronParser extends Parser {
+  private val log = Logger.getLogger(getClass.getName)
+  def apply(input: String, timeZoneStr: String = ""): Option[CronSchedule] = {
+    val unixCronParser =  new CronUtilsParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX))
+    val cron = Try(unixCronParser.parse(input))
+    val cronExpression = cron.map {
+      parsed => {
+        ExecutionTime.forCron(parsed)
+      }
+    }
+
+    val dateForNextRun = cronExpression.map {
+      executionTime => executionTime.nextExecution(ZonedDateTime.now)
+    }.map {
+      //there is no timezone to take into account here; we just want the next run for the
+      //cron job.
+      zdt => new DateTime(zdt.toInstant().toEpochMilli(), DateTimeZone.forID("UTC"))
+    }
+    dateForNextRun match {
+      case Success(dateForNextRun) => Some(new CronSchedule(dateForNextRun, cron.get))
+      case Failure(e) => {
+        None
+      }
+    }
+  }
+}
+
 object ParserForSchedule {
+  val log = Logger.getLogger(getClass.getName)
   def apply(input: String): Option[Parser] = {
-    Some(ISO8601Parser)
+    if(ISO8601Parser.iso8601ExpressionRegex.pattern.matcher(input).matches()) {
+      Some(ISO8601Parser)
+    } else {
+      Some(CronParser)
+    }
   }
 }
