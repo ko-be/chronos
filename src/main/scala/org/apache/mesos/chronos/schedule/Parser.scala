@@ -6,7 +6,7 @@ import java.util.logging.Logger
 import org.joda.time.format.ISOPeriodFormat
 import org.joda.time.DateTime
 import java.util.TimeZone
-import java.time.ZonedDateTime
+import java.time.{ZonedDateTime, ZoneId}
 import com.cronutils.parser.{CronParser => CronUtilsParser}
 import com.cronutils.model.definition.CronDefinitionBuilder
 import com.cronutils.model.CronType
@@ -45,19 +45,14 @@ object CronParser extends Parser {
   def apply(input: String, timeZoneStr: String = ""): Option[CronSchedule] = {
     val unixCronParser =  new CronUtilsParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX))
     val cron = Try(unixCronParser.parse(input))
-    val cronExpression = cron.map {
-      parsed => {
-        ExecutionTime.forCron(parsed)
-      }
-    }
+    val cronExpression = cron.map { ExecutionTime.forCron(_) }
 
     val dateForNextRun = cronExpression.map {
-      executionTime => executionTime.nextExecution(ZonedDateTime.now)
-    }.map {
-      //there is no timezone to take into account here; we just want the next run for the
-      //cron job.
-      zdt => new DateTime(zdt.toInstant().toEpochMilli(), DateTimeZone.forID("UTC"))
-    }
+      //this gets a zoneddatetime for the next execution - force the timezone so that
+      //we don't get into trouble when the system time != UTC
+      _.nextExecution(ZonedDateTime.now(ZoneId.of("UTC")))
+    }.map { zdt => new DateTime(zdt.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")) }
+
     dateForNextRun match {
       case Success(dateForNextRun) => Some(new CronSchedule(dateForNextRun, cron.get))
       case Failure(e) => {
