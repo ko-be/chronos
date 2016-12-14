@@ -42,7 +42,7 @@ object ISO8601Parser extends Parser{
 
 object CronParser extends Parser {
   private val log = Logger.getLogger(getClass.getName)
-  def apply(input: String, timeZoneStr: String = ""): Option[CronSchedule] = {
+  def apply(input: String, timeZoneStr: String = "UTC"): Option[CronSchedule] = {
     val unixCronParser =  new CronUtilsParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX))
     val cron = Try(unixCronParser.parse(input))
     val cronExpression = cron.map { ExecutionTime.forCron(_) }
@@ -50,7 +50,7 @@ object CronParser extends Parser {
     val dateForNextRun = cronExpression.map {
       //this gets a zoneddatetime for the next execution - force the timezone so that
       //we don't get into trouble when the system time != UTC
-      _.nextExecution(ZonedDateTime.now(ZoneId.of("UTC")))
+      _.nextExecution(ZonedDateTime.now(ZoneId.of(timeZoneStr)))
     }.map { zdt => new DateTime(zdt.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")) }
 
     dateForNextRun match {

@@ -23,6 +23,10 @@ class CronParserSpec extends SpecificationWithJUnit {
      val result = CronParser("HI")
      result must beNone
    }
+   "Adjusts the timezone according to the scheduleTimeZone" in {
+     val result = CronParser("0 18 * * *", "US/Pacific")
+     result.get.start.hourOfDay().get must_== 2
+   }
  }
 }
 
