@@ -51,7 +51,12 @@ object CronParser extends Parser {
       //this gets a zoneddatetime for the next execution - force the timezone so that
       //we don't get into trouble when the system time != UTC
       _.nextExecution(ZonedDateTime.now(ZoneId.of(timeZoneStr)))
-    }.map { zdt => new DateTime(zdt.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")) }
+    }.map {
+      //we use jodatime DateTime objects for actual scheduling, so we have to convert from
+      //a ZonedDateTime to a DateTime here.
+      zdt => new DateTime( zdt.toInstant().toEpochMilli(),
+      DateTimeZone.forTimeZone(TimeZone.getTimeZone(zdt.getZone())))
+    }
 
     dateForNextRun match {
       case Success(dateForNextRun) => Some(new CronSchedule(dateForNextRun, cron.get))

@@ -23,18 +23,20 @@ class CronParserSpec extends SpecificationWithJUnit {
      val result = CronParser("HI")
      result must beNone
    }
-   "Adjusts the timezone according to the scheduleTimeZone" in {
-     val result = CronParser("0 18 * * *", "US/Pacific")
-     result.get.start.hourOfDay().get must_== 2
+   "Creates a start time object with the correct time zone" in {
+     val result = CronParser("0 18 * * *", "America/Los_Angeles")
+     result.get.start.hourOfDay().get must_== 18
+     result.get.start.getZone.getID must_== "America/Los_Angeles"
    }
  }
 }
 
 class CronParserAltTZSpec extends SpecificationWithJUnit with AlternativeTimezoneTest {
   "In US/Pacific Cron Parser should" in {
-   "Return the schedule in UTC" in {
+   "Return a schedule with the correct TZ" in {
      val result = CronParser("0 18 * * *")
      result.get.start.hourOfDay().get must_== 18
+     result.get.start.getZone.getID == "UTC"
    }
   }
 }

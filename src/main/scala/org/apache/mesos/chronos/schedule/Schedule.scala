@@ -1,6 +1,7 @@
 package org.apache.mesos.chronos.schedule
 
 import java.time.ZonedDateTime
+import java.util.TimeZone
 
 import com.cronutils.model.time.ExecutionTime
 import com.cronutils.model.Cron
@@ -35,7 +36,8 @@ object Nextable {
     def next(current: CronSchedule): Option[CronSchedule] = {
       val executionTime = ExecutionTime.forCron(current.cron)
       val dateForNextRun = executionTime.nextExecution(current.start.toGregorianCalendar().toZonedDateTime())
-      Some(new CronSchedule(new DateTime(dateForNextRun.toInstant().toEpochMilli(), DateTimeZone.forID("UTC")), current.cron))
+      val nextRun = new DateTime(dateForNextRun.toInstant().toEpochMilli(), DateTimeZone.forTimeZone(TimeZone.getTimeZone(dateForNextRun.getZone())))
+      Some(new CronSchedule(nextRun, current.cron))
     }
   }
   implicit object NextableISO8601 extends Nextable[ISO8601Schedule] {

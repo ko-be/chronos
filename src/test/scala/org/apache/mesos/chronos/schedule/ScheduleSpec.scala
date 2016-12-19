@@ -32,5 +32,13 @@ class ScheduleSpec extends SpecificationWithJUnit{
       val inTenMinutes = NextableCron.next(inFiveMinutes.get)
       Minutes.minutesBetween(current.start.toDateTime, inTenMinutes.get.start.toDateTime) must_== Minutes.minutes(10)
     }
+
+    "Keep the timezone consistent" in {
+      val current = CronParser("0 18 * * *", "America/Los_Angeles").get
+      val nextRun = NextableCron.next(current)
+      nextRun must beSome
+      nextRun.get.start.getHourOfDay must_== current.start.getHourOfDay
+      nextRun.get.start.getZone.getID must_== "America/Los_Angeles"
+    }
   }
 }
