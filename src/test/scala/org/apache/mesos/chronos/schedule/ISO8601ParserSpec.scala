@@ -32,5 +32,17 @@ class ISO8601ParserSpec extends SpecificationWithJUnit {
      val result = ISO8601Parser("R/2012-01-02T00:00:00.000Z/P1D", "foo")
      result must beNone
    }
+   
+   "Create a job 'now' when start time is omitted and timezone is UTC" in {
+     val result = ISO8601Parser("R//P1D", "UTC")
+     result must beSome
+     result.get.start.getHourOfDay must_== DateTime.now(DateTimeZone.UTC).getHourOfDay
+   }
+   
+   "Create a job 'now' when start time is omitted and timezone is not UTC" in {
+     val result = ISO8601Parser("R//P1D", "America/Los_Angeles")
+     result must beSome
+     result.get.start.getHourOfDay must_== DateTime.now(DateTimeZone.forID("America/Los_Angeles")).getHourOfDay
+   }
  }
 }

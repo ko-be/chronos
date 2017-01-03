@@ -33,7 +33,7 @@ object ISO8601Parser extends Parser{
       //TODO: deal with no period provided?
       val period: Period = ISOPeriodFormat.standard.parsePeriod(periodStr)
       val start: DateTime = startStr match {
-        case "" => DateTime.now(DateTimeZone.UTC)
+        case "" => DateTime.now(DateTimeZone.forID(timeZoneStr))
         case _ => DateTime.parse(startStr)
       }
       WithTimeZoneConsidered(new ISO8601Schedule(recurrences, start, period), timeZoneString)
