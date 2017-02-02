@@ -3,10 +3,24 @@ package org.apache.mesos.chronos.schedule
 import org.specs2.mutable.SpecificationWithJUnit
 
 import org.joda.time.{DateTime, DateTimeZone, Period, Minutes}
+import org.joda.time.format.ISODateTimeFormat
 import org.apache.mesos.chronos.schedule.Nextable.NextableCron
 import org.apache.mesos.chronos.schedule.Nextable.NextableISO8601
 
 class ScheduleSpec extends SpecificationWithJUnit{
+
+  "ISO8601Schedule" should {
+    "Encode repeat string correctly for unlimited jobs" in {
+      val now = DateTime.now
+      val job = new ISO8601Schedule(-1, now, Period.hours(1))
+      job.toString must_== "R/%s/PT1H".format(ISODateTimeFormat.dateTime.print(now))
+    }
+    "Encode repeat string correctly for 0 jobs" in {
+      val now = DateTime.now
+      val job = new ISO8601Schedule(0, now, Period.hours(1))
+      job.toString must_== "R0/%s/PT1H".format(ISODateTimeFormat.dateTime.print(now))
+    }
+  }
   "NextableISO8601" should {
     "Reduce recurrences with each iteration" in {
       val current = ISO8601Parser("R2/2012-01-02T00:00:01.000Z/P1M").get
