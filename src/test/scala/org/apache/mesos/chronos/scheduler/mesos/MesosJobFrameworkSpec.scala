@@ -1,11 +1,13 @@
 package org.apache.mesos.chronos.scheduler.mesos
 
+import java.nio.charset.StandardCharsets
 import mesosphere.mesos.protos._
 import mesosphere.mesos.util.FrameworkIdUtil
 import com.google.common.cache.Cache
 import org.apache.mesos.Protos.Offer
 import org.apache.mesos.chronos.ChronosTestHelper._
 import org.apache.mesos.chronos.scheduler.jobs.{ BaseJob, JobScheduler, TaskManager }
+import org.apache.mesos.chronos.scheduler.state.PersistenceStore
 import org.apache.mesos.{ Protos, SchedulerDriver }
 import org.mockito.Mockito._
 import org.specs2.mock.Mockito
@@ -179,5 +181,82 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
         mock[MesosOfferReviver]))
     val status = Protos.TaskStatus.newBuilder().setTaskId(Protos.TaskID.newBuilder().setValue("BLAHBLAHBLAH")).setState(Protos.TaskState.TASK_RUNNING).build()
     mesosJobFramework.statusUpdate(schedulerDriver, status) must not(throwA[MatchError])
+  }
+
+  "Ignore TASK_LOST for jobs that we don't believe to be running" in {
+    import mesosphere.mesos.protos.Implicits._
+    import scala.collection.JavaConverters._
+
+    val taskManager = mock[TaskManager]
+    val persistenceStore = mock[PersistenceStore]
+    val fakeTasks = collection.immutable.HashMap[String, Array[Byte]]()
+    persistenceStore.getTasks returns fakeTasks
+    taskManager.persistenceStore returns persistenceStore
+    val jobScheduler = mock[JobScheduler]
+
+    val taskCache = mock[Cache[String, Protos.TaskState]]
+    doNothing.when(taskCache).put(any, any)
+
+    taskManager.taskCache returns taskCache
+
+    val mesosDriverFactory = mock[MesosDriverFactory]
+    val schedulerDriver = mock[SchedulerDriver]
+    mesosDriverFactory.get().returns(schedulerDriver)
+
+    val mesosJobFramework = spy(
+      new MesosJobFramework(
+        mesosDriverFactory,
+        jobScheduler,
+        taskManager,
+        makeConfig("--decline_offer_duration", "3000"),
+        mock[FrameworkIdUtil],
+        mock[MesosTaskBuilder],
+        mock[MesosOfferReviver]))
+    val status = Protos.TaskStatus.newBuilder()
+      .setTaskId(Protos.TaskID.newBuilder()
+      .setValue("mytask"))
+      .setState(Protos.TaskState.TASK_LOST)
+      .build()
+
+    mesosJobFramework.statusUpdate(schedulerDriver, status)
+    there was no(jobScheduler).handleFailedTask(status)
+  }
+
+  "Treat TASK_LOST as failed when the task is in task manager" in {
+    import mesosphere.mesos.protos.Implicits._
+    import scala.collection.JavaConverters._
+
+    val taskManager = mock[TaskManager]
+    val persistenceStore = mock[PersistenceStore]
+    val fakeTasks = collection.immutable.HashMap("ct:0000:1:foo" -> "foo".getBytes(StandardCharsets.UTF_8) )
+    persistenceStore.getTasks returns fakeTasks
+    taskManager.persistenceStore returns persistenceStore
+    val jobScheduler = mock[JobScheduler]
+
+    val taskCache = mock[Cache[String, Protos.TaskState]]
+    doNothing.when(taskCache).put(any, any)
+
+    taskManager.taskCache returns taskCache
+
+    val mesosDriverFactory = mock[MesosDriverFactory]
+    val schedulerDriver = mock[SchedulerDriver]
+    mesosDriverFactory.get().returns(schedulerDriver)
+
+    val mesosJobFramework = spy(
+      new MesosJobFramework(
+        mesosDriverFactory,
+        jobScheduler,
+        taskManager,
+        makeConfig("--decline_offer_duration", "3000"),
+        mock[FrameworkIdUtil],
+        mock[MesosTaskBuilder],
+        mock[MesosOfferReviver]))
+    val status = Protos.TaskStatus.newBuilder()
+      .setTaskId(Protos.TaskID.newBuilder()
+      .setValue("ct:0000:1:foo"))
+      .setState(Protos.TaskState.TASK_LOST)
+      .build()
+    mesosJobFramework.statusUpdate(schedulerDriver, status)
+    there was one(jobScheduler).handleFailedTask(status)
   }
 }

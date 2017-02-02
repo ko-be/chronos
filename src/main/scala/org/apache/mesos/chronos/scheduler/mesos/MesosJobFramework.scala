@@ -234,8 +234,17 @@ class MesosJobFramework @Inject()(
           log.info("Task with id '%s' FAILED".format(taskId))
           scheduler.handleFailedTask(taskStatus)
         case TaskState.TASK_LOST =>
-          log.info("Task with id '%s' LOST".format(taskId))
-          scheduler.handleFailedTask(taskStatus)
+          if (taskManager.persistenceStore.getTasks.contains(taskId)) {
+            //if we know about this, then it's the real deal and the task is lost. 
+            //we treat lost tasks as failed.
+            log.info("TASK_LOST for task %s. Treating as a failed run.".format(taskId))
+            scheduler.handleFailedTask(taskStatus)
+          } else {
+            //if we don't have record about the lost task running, then ignore the message.
+            //explicitly, we're *not* marking tasks as failed if we don't think they're running
+            //anymore, since it may have finished between reconcile time and response time.
+            log.info("Ignoring TASK_LOST for task %s, since we have no record that it's running.".format(taskId))
+          }
         case TaskState.TASK_RUNNING =>
           log.info("Task with id '%s' RUNNING. Removing persistence task.".format(taskId))
           taskManager.removeTask(taskStatus.getTaskId.getValue)
