@@ -15,7 +15,7 @@ sealed trait Schedule {
 
 final case class ISO8601Schedule(val recurrences: Long, val start: DateTime, val period: Period) extends Schedule {
   override def toString() = {
-    "R%s/%s/%s".format(if(recurrences > 0) recurrences.toString else "", ISODateTimeFormat.dateTime.print(start), period.toString())
+    "R%s/%s/%s".format(if(recurrences < 0) "" else recurrences.toString, ISODateTimeFormat.dateTime.print(start), period.toString())
   }
 }
 
