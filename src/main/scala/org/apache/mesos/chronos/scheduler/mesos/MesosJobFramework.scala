@@ -187,10 +187,26 @@ class MesosJobFramework @Inject()(
       )
       if (status == Protos.Status.DRIVER_RUNNING) {
         for (task <- tasks) {
-          runningTasks.put(task._2.name, new ChronosTask(task._3.getSlaveId.getValue))
-
-          //TODO(FL): Handle case if chronos can't launch the task.
-          log.info("Task '%s' launched, status: '%s'".format(task._1, status.toString))
+          //we create a TaskStatus object so that this task gets picked up in
+          //any reconciliations occur between now and the next status update sent from Mesos.
+          //If mesos drops the message to launch the task, then
+          //we'll find out at the next reconcile (mesos will send TASK_LOST for an unknown task).
+          //This means there could be a delay of up to config.reconciliationInterval
+          //before we find out that it didn't launch successfully. Ideally we should do something more
+          //sophisticated, and aggresively reconcile newly launched tasks that we don't hear back from
+          //mesos about, but this patches over the problem and means that jobs won't be forever blocked
+          //as 'already running' when in reality mesos just never got the message to launch them.
+          val initialStatus = TaskStatus.newBuilder()
+            .setSlaveId(task._3.getSlaveId)
+            .setTaskId(
+                TaskID.newBuilder()
+                .setValue(task._1)
+                .build()
+             )
+             .setState(TaskState.TASK_RUNNING)
+             .build()
+          runningTasks = runningTasks + (task._2.name -> new ChronosTask(task._3.getSlaveId.getValue, Some(initialStatus)))
+          log.info("Attempted launch of '%s' - waiting for StatusUpdate confirmation.".format(task._1))
         }
       } else {
         log.warning("Other status returned.")
@@ -206,7 +222,14 @@ class MesosJobFramework @Inject()(
 
   @Override
   def statusUpdate(schedulerDriver: SchedulerDriver, taskStatus: TaskStatus) {
-    log.info("Got status update: reason: %s state: %s message:".format(taskStatus.getReason, taskStatus.getState, taskStatus.getMessage))
+    log.info("Got status update for task id %s: reason: %s state: %s message: %s slave_id: %s executor_id: %s".format(
+        taskStatus.getTaskId.getValue,
+        taskStatus.getReason.toString(),
+        taskStatus.getState,
+        taskStatus.getMessage,
+        taskStatus.getSlaveId.getValue,
+        taskStatus.getExecutorId.getValue
+    ))
 
     val taskId = taskStatus.getTaskId.getValue
     val state = taskStatus.getState
