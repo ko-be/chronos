@@ -45,7 +45,7 @@ class MesosJobFramework @Inject()(
 
     log.info("Registered with ID: " + frameworkID.getValue)
     log.info("Master info:" + masterInfo.toString)
-    log.info("RUNNING TASKS: %s".format(runningTasks.toString))
+    log.info("Running Tasks on registration: %s".format(runningTasks.toString))
     frameworkIdUtil.store(frameworkID)
     mesosOfferReviver.reviveOffers()
   }
@@ -278,7 +278,7 @@ class MesosJobFramework @Inject()(
 
   @Override
   def slaveLost(schedulerDriver: SchedulerDriver, slaveID: SlaveID) {
-    log.warning("Slave lost")
+    log.warning("Slave %s lost".format(slaveID.getValue))
 
     // Remove any running jobs from this slave
     val jobs = runningTasks.filter {
@@ -290,7 +290,7 @@ class MesosJobFramework @Inject()(
 
   @Override
   def executorLost(schedulerDriver: SchedulerDriver, executorID: ExecutorID, slaveID: SlaveID, status: Int) {
-    log.info("Executor lost")
+    log.warning("Executor %s on slave %s lost".format(executorID.getValue, slaveID.getValue))
   }
 
   @Override
