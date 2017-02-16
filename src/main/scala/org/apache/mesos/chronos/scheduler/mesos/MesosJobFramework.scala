@@ -17,6 +17,10 @@ import scala.collection.JavaConverters._
 import scala.collection.mutable
 import scala.collection.mutable.{Buffer, HashMap, HashSet}
 
+case class ChronosTask(val slaveId: String, val taskStatus: Option[TaskStatus])
+
+
+
 /**
  * Provides the interface to chronos. Receives callbacks from chronos when resources are offered, declined etc.
  * @author Florian Leibert (flo@leibert.de)
@@ -339,14 +343,6 @@ class MesosJobFramework @Inject()(
       "cpus: " + this.cpus + " mem: " + this.mem + " disk: " + this.disk
     }
   }
-
-  private class ChronosTask(val slaveId: String,
-                            var taskStatus: Option[TaskStatus] = None) {
-    override def toString: String = {
-      s"slaveId=$slaveId, taskStatus=${taskStatus.getOrElse("none").toString}"
-    }
-  }
-
   object Resources {
     def apply(offer: Offer): Resources = {
       val resources = offer.getResourcesList.asScala.filter(r => !r.hasRole || r.getRole == "*" || r.getRole == config.mesosRole())
