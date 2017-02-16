@@ -327,7 +327,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   }
 
   private def getNewSuccessfulJob(job: BaseJob): BaseJob = {
-    log.info(s"Marking job {job.name} as success")
+    log.info("Marking job %s as success".format(job.name))
     val newJob = job match {
       case job: ScheduleBasedJob =>
         job.copy(successCount = job.successCount + 1,
