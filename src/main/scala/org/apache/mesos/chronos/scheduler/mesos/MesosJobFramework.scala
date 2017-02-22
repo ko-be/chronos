@@ -205,7 +205,7 @@ class MesosJobFramework @Inject()(
              )
              .setState(TaskState.TASK_RUNNING)
              .build()
-          runningTasks = runningTasks + (task._2.name -> new ChronosTask(task._3.getSlaveId.getValue, Some(initialStatus)))
+          runningTasks = runningTasks.+=(task._2.name -> new ChronosTask(task._3.getSlaveId.getValue, Some(initialStatus)))
           log.info("Attempted launch of '%s' - waiting for StatusUpdate confirmation.".format(task._1))
         }
       } else {
@@ -291,7 +291,7 @@ class MesosJobFramework @Inject()(
   def updateRunningTask(jobName: String, taskStatus: TaskStatus): Unit = {
     runningTasks.get(jobName) match {
       case Some(chronosTask) =>
-        chronosTask.taskStatus = Some(taskStatus)
+        runningTasks.+=(jobName -> chronosTask.copy(taskStatus=Some(taskStatus)))
       case _ =>
         runningTasks.put(jobName, new ChronosTask(taskStatus.getSlaveId.getValue, Some(taskStatus)))
         log.warning(s"Received status update for untracked jobName=$jobName")
