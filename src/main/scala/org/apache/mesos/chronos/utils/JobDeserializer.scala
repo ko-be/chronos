@@ -7,12 +7,12 @@ import org.apache.mesos.chronos.scheduler.jobs._
 import org.apache.mesos.chronos.scheduler.jobs.constraints._
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.node.ObjectNode
-import com.fasterxml.jackson.databind.{DeserializationContext, JsonDeserializer, JsonNode}
+import com.fasterxml.jackson.databind.{ DeserializationContext, JsonDeserializer, JsonNode }
 import org.joda.time.Period
 
 import scala.collection.JavaConversions._
 import scala.util.Try
-import org.apache.mesos.chronos.schedule.{ParserForSchedule,ISO8601Parser}
+import org.apache.mesos.chronos.schedule.{ ParserForSchedule, ISO8601Parser }
 
 object JobDeserializer {
   var config: SchedulerConfiguration = _
@@ -99,17 +99,17 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
       else ""
 
     val cpus =
-      if (node.has("cpus") && node.get("cpus") != null && node.get("cpus").asDouble != 0) node.get("cpus").asDouble
+      if (node.has("cpus") && node.get("cpus") != null) node.get("cpus").asDouble
       else if (JobDeserializer.config != null) JobDeserializer.config.mesosTaskCpu()
       else 0
 
     val disk =
-      if (node.has("disk") && node.get("disk") != null && node.get("disk").asDouble != 0) node.get("disk").asDouble
+      if (node.has("disk") && node.get("disk") != null) node.get("disk").asDouble
       else if (JobDeserializer.config != null) JobDeserializer.config.mesosTaskDisk()
       else 0
 
     val mem =
-      if (node.has("mem") && node.get("mem") != null && node.get("mem").asDouble != 0) node.get("mem").asDouble
+      if (node.has("mem") && node.get("mem") != null) node.get("mem").asDouble
       else if (JobDeserializer.config != null) JobDeserializer.config.mesosTaskMem()
       else 0
 
@@ -193,7 +193,7 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
       if (containerNode.has("parameters")) {
         containerNode.get("parameters").elements().map {
           case node: ObjectNode =>
-          Parameter(node.get("key").asText(), node.get("value").asText)
+            Parameter(node.get("key").asText(), node.get("value").asText)
         }.foreach(parameters.add)
       }
 
@@ -240,13 +240,13 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner, ownerName = ownerName,
         description = description, lastError = lastError, lastSuccess = lastSuccess, async = async,
         cpus = cpus, disk = disk, mem = mem, disabled = disabled,
-        errorsSinceLastSuccess = errorsSinceLastSuccess, fetch = fetch, uris = uris,  highPriority = highPriority,
+        errorsSinceLastSuccess = errorsSinceLastSuccess, fetch = fetch, uris = uris, highPriority = highPriority,
         runAsUser = runAsUser, container = container, scheduleTimeZone = scheduleTimeZone,
         environmentVariables = environmentVariables, shell = shell, arguments = arguments, softError = softError,
         dataProcessingJobType = dataProcessingJobType, constraints = constraints))
-       deserializedJob match {
+      deserializedJob match {
         case Some(job) => job
-        case None => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s for job %s".format(node.get("schedule").asText, scheduleTimeZone, name))
+        case None      => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s for job %s".format(node.get("schedule").asText, scheduleTimeZone, name))
       }
     } else {
       /* schedule now */
@@ -254,13 +254,13 @@ class JobDeserializer extends JsonDeserializer[BaseJob] {
         errorCount = errorCount, executor = executor, executorFlags = executorFlags, taskInfoData = taskInfoData, retries = retries, owner = owner,
         ownerName = ownerName, description = description, lastError = lastError, lastSuccess = lastSuccess,
         async = async, cpus = cpus, disk = disk, mem = mem, disabled = disabled,
-        errorsSinceLastSuccess = errorsSinceLastSuccess, fetch = fetch, uris = uris,  highPriority = highPriority,
+        errorsSinceLastSuccess = errorsSinceLastSuccess, fetch = fetch, uris = uris, highPriority = highPriority,
         runAsUser = runAsUser, container = container, environmentVariables = environmentVariables, shell = shell,
         arguments = arguments, softError = softError, dataProcessingJobType = dataProcessingJobType,
         constraints = constraints))
       job match {
         case Some(job) => job
-        case None => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s".format(node.get("schedule").asText, "UTC"))
+        case None      => throw ctxt.mappingException("Couldn't parse schedule %s with timezonestring %s".format(node.get("schedule").asText, "UTC"))
       }
     }
   }
