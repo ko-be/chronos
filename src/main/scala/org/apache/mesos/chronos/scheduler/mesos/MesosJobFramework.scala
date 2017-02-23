@@ -38,7 +38,7 @@ class MesosJobFramework @Inject()(
   val frameworkName = "chronos"
   private[this] val log = Logger.getLogger(getClass.getName)
   private var lastReconciliation = DateTime.now.plusSeconds(config.reconciliationInterval())
-  private var runningTasks = new mutable.HashMap[String, ChronosTask]
+  var runningTasks = new mutable.HashMap[String, ChronosTask]
 
   /* Overridden methods from MesosScheduler */
   @Override
