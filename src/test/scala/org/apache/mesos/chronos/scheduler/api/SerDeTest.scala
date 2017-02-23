@@ -1,9 +1,10 @@
 package org.apache.mesos.chronos.scheduler.api
 
-import org.apache.mesos.chronos.scheduler.jobs.constraints.{LikeConstraint, EqualsConstraint, UnlikeConstraint}
-import org.apache.mesos.chronos.scheduler.jobs.{DependencyBasedJob, DockerContainer, EnvironmentVariable, ScheduleBasedJob, _}
-import org.apache.mesos.chronos.schedule.{CronSchedule, ISO8601Parser,ISO8601Schedule}
-import org.apache.mesos.chronos.utils.{JobDeserializer, JobSerializer}
+import org.apache.mesos.chronos.scheduler.jobs.constraints.{ LikeConstraint, EqualsConstraint, UnlikeConstraint }
+import org.apache.mesos.chronos.scheduler.jobs.{ DependencyBasedJob, DockerContainer, EnvironmentVariable, ScheduleBasedJob, _ }
+import org.apache.mesos.chronos.schedule.{ CronSchedule, ISO8601Parser, ISO8601Schedule }
+import org.apache.mesos.chronos.utils.{ JobDeserializer, JobSerializer }
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import org.joda.time.Minutes
@@ -18,16 +19,15 @@ class SerDeTest extends SpecificationWithJUnit {
       mod.addSerializer(classOf[BaseJob], new JobSerializer)
       mod.addDeserializer(classOf[BaseJob], new JobDeserializer)
       objectMapper.registerModule(mod)
+      objectMapper.registerModule(DefaultScalaModule)
 
       val environmentVariables = Seq(
         EnvironmentVariable("FOO", "BAR"),
-        EnvironmentVariable("AAAA", "BBBB")
-      )
+        EnvironmentVariable("AAAA", "BBBB"))
 
       val volumes = Seq(
         Volume(Option("/host/dir"), "container/dir", Option(VolumeMode.RO)),
-        Volume(None, "container/dir", None)
-      )
+        Volume(None, "container/dir", None))
 
       val forcePullImage = false
 
@@ -36,14 +36,12 @@ class SerDeTest extends SpecificationWithJUnit {
       val container = DockerContainer("dockerImage", volumes, parameters, NetworkMode.BRIDGE, forcePullImage)
 
       val arguments = Seq(
-        "-testOne"
-      )
+        "-testOne")
 
       val constraints = Seq(
         EqualsConstraint("rack", "rack-1"),
         LikeConstraint("rack", "rack-[1-3]"),
-        UnlikeConstraint("host", "foo")
-      )
+        UnlikeConstraint("host", "foo"))
 
       val fetch = Seq(Fetch("https://mesos.github.io/chronos/", true, false, true))
 
@@ -64,16 +62,15 @@ class SerDeTest extends SpecificationWithJUnit {
       mod.addSerializer(classOf[BaseJob], new JobSerializer)
       mod.addDeserializer(classOf[BaseJob], new JobDeserializer)
       objectMapper.registerModule(mod)
+      objectMapper.registerModule(DefaultScalaModule)
 
       val environmentVariables = Seq(
         EnvironmentVariable("FOO", "BAR"),
-        EnvironmentVariable("AAAA", "BBBB")
-      )
+        EnvironmentVariable("AAAA", "BBBB"))
 
       val volumes = Seq(
         Volume(Option("/host/dir"), "container/dir", Option(VolumeMode.RW)),
-        Volume(None, "container/dir", None)
-      )
+        Volume(None, "container/dir", None))
 
       val forcePullImage = true
       var parameters = scala.collection.mutable.ListBuffer[Parameter]()
@@ -81,17 +78,15 @@ class SerDeTest extends SpecificationWithJUnit {
       val container = DockerContainer("dockerImage", volumes, parameters, NetworkMode.HOST, forcePullImage)
 
       val arguments = Seq(
-        "-testOne"
-      )
+        "-testOne")
 
       val constraints = Seq(
         EqualsConstraint("rack", "rack-1"),
         LikeConstraint("rack", "rack-[1-3]"),
-        UnlikeConstraint("host", "foo")
-      )
+        UnlikeConstraint("host", "foo"))
 
       val fetch = Seq(Fetch("https://mesos.github.io/chronos/", true, false, true))
-      
+
       val schedule = ISO8601Parser("R1/2012-10-01T05:52:00Z/PT30S").get
 
       val a = new ScheduleBasedJob(schedule, "A", "noop", Minutes.minutes(5).toPeriod, 10L, 20L,
