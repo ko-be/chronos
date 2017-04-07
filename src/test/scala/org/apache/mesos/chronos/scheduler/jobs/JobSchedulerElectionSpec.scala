@@ -2,23 +2,24 @@ package org.apache.mesos.chronos.scheduler.jobs
 
 import java.util.concurrent.TimeUnit
 
+import akka.actor.ActorSystem
 import org.apache.mesos.chronos.scheduler.graph.JobGraph
 import org.apache.mesos.chronos.scheduler.mesos.MesosDriverFactory
 import org.apache.mesos.chronos.scheduler.state.PersistenceStore
 import org.apache.curator.framework.recipes.leader.LeaderLatch
-import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
+import org.apache.curator.framework.{ CuratorFramework, CuratorFrameworkFactory }
 import org.apache.curator.retry.ExponentialBackoffRetry
-import org.apache.curator.test.{InstanceSpec, TestingCluster}
-import org.apache.curator.utils.{CloseableUtils, EnsurePath}
+import org.apache.curator.test.{ InstanceSpec, TestingCluster }
+import org.apache.curator.utils.{ CloseableUtils, EnsurePath }
 import org.joda.time.Period
-import org.junit.Assert.{assertFalse, assertTrue}
+import org.junit.Assert.{ assertFalse, assertTrue }
 import org.junit.Test
 import org.mockito.Mockito.doNothing
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationWithJUnit
 import org.apache.mesos.chronos.ExitDisabledTest
 
-class JobSchedulerElectionSpec extends SpecificationWithJUnit with ExitDisabledTest with Mockito{
+class JobSchedulerElectionSpec extends SpecificationWithJUnit with ExitDisabledTest with Mockito {
   var port = 8080
 
   @Test
@@ -134,8 +135,8 @@ class JobSchedulerElectionSpec extends SpecificationWithJUnit with ExitDisabledT
       leaderLatch = leaderLatch,
       leaderPath = leaderPath,
       jobMetrics = mock[JobMetrics],
-      jobsObserver = mock[JobsObserver.Observer]
-    )
+      jobsObserver = mock[JobsObserver.Observer],
+      actorSystem = ActorSystem())
 
     val ensurePath: EnsurePath = new EnsurePath(leaderPath)
     ensurePath.ensure(curator.getZookeeperClient)

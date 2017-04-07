@@ -1,12 +1,14 @@
 package org.apache.mesos.chronos.scheduler.mesos
 
+import akka.actor.ActorSystem
+import akka.actor.Scheduler
 import java.nio.charset.StandardCharsets
 import java.util.Collection
 import mesosphere.mesos.util.FrameworkIdUtil
 import mesosphere.mesos.protos.{ ScalarResource, Resource }
 import com.google.common.cache.Cache
 import org.apache.mesos.chronos.ChronosTestHelper._
-import org.apache.mesos.chronos.scheduler.jobs.{ ScheduleBasedJob, BaseJob, JobScheduler, TaskManager }
+import org.apache.mesos.chronos.scheduler.jobs.{ ScheduleBasedJob, BaseJob, JobScheduler, TaskManager, JobsObserver, JobMetrics }
 import org.apache.mesos.chronos.schedule.ISO8601Parser
 import org.apache.mesos.chronos.scheduler.state.PersistenceStore
 import org.apache.mesos.Protos
@@ -300,15 +302,33 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     val mockTaskManager = mock[TaskManager]
     val jobGraph = new JobGraph
     val mockPersistenceStore = mock[PersistenceStore]
+    mockPersistenceStore.getTasks.returns(Map())
     val epsilon = Seconds.seconds(60).toPeriod
+    mockTaskManager.persistenceStore returns mockPersistenceStore
+    val taskCache = mock[Cache[String, Protos.TaskState]]
+    doNothing.when(taskCache).put(any, any)
 
-    val scheduler = mockScheduler(epsilon, mockTaskManager, jobGraph, mockPersistenceStore)
+    mockTaskManager.taskCache returns taskCache
+
+    val mockScheduler = mock[Scheduler]
+    val mockActorSystem = mock[ActorSystem]
+
+    mockActorSystem.scheduler.returns(mockScheduler)
+
+    val scheduler = new JobScheduler(
+      scheduleHorizon = epsilon,
+      taskManager = mockTaskManager,
+      jobGraph = jobGraph,
+      persistenceStore = mockPersistenceStore,
+      jobMetrics = mock[JobMetrics],
+      jobsObserver = mock[JobsObserver.Observer],
+      actorSystem = ActorSystem())
 
     val mesosJobFramework = spy(
       new MesosJobFramework(
         mesosDriverFactory,
         scheduler,
-        mock[TaskManager],
+        mockTaskManager,
         makeConfig(),
         mock[FrameworkIdUtil],
         new MesosTaskBuilder(makeConfig()),
