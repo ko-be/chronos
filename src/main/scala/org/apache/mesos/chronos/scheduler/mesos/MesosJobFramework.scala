@@ -4,7 +4,6 @@ import java.util.logging.Logger
 
 import org.apache.mesos.chronos.scheduler.config.SchedulerConfiguration
 import org.apache.mesos.chronos.scheduler.jobs._
-import org.apache.mesos.chronos.scheduler.jobs.constraints.Constraint
 import org.apache.mesos.chronos.utils.JobDeserializer
 import com.google.inject.Inject
 import mesosphere.mesos.util.FrameworkIdUtil
@@ -15,7 +14,9 @@ import org.joda.time.DateTime
 import scala.annotation.tailrec
 import scala.collection.JavaConverters._
 import scala.collection.mutable
-import scala.collection.mutable.{ Buffer, HashMap, HashSet }
+
+import akka.actor.Cancellable
+import scala.concurrent.duration._
 
 /**
  * A class representing the runtime info of an in-flight task.
@@ -41,6 +42,7 @@ class MesosJobFramework @Inject() (
   private[this] val log = Logger.getLogger(getClass.getName)
   private var lastReconciliation = DateTime.now.plusSeconds(config.reconciliationInterval())
   var runningTasks = new mutable.HashMap[String, ChronosTask]
+  var startupTimers = new mutable.HashMap[String, Cancellable]
 
   /* Overridden methods from MesosScheduler */
   @Override
@@ -207,6 +209,19 @@ class MesosJobFramework @Inject() (
               .setState(TaskState.TASK_RUNNING)
               .build()
             runningTasks = runningTasks.+=(task._2.name -> new ChronosTask(task._3.getSlaveId.getValue, Some(initialStatus)))
+
+            val lostStatus = TaskStatus.newBuilder(initialStatus)
+              .setState(TaskState.TASK_LOST)
+              .build()
+
+            import scheduler.actorSystem.dispatcher
+            log.info(scheduler.actorSystem.toString())
+
+            val cancellable = scheduler.akkaScheduler.scheduleOnce(60 milliseconds) {
+              statusUpdate(mesosDriver.get(), lostStatus)
+            }
+            startupTimers = startupTimers.+=(task._2.name -> cancellable)
+
             log.info("Attempted launch of '%s' - waiting for StatusUpdate confirmation.".format(task._1))
           }
         } else {
@@ -236,6 +251,15 @@ class MesosJobFramework @Inject() (
     if (TaskUtils.isValidVersion(taskId)) {
       taskManager.taskCache.put(taskId, state)
       val (jobName, _, _, _) = TaskUtils.parseTaskId(taskId)
+
+      if (state != TaskState.TASK_STAGING) {
+        // what happens when we cancel while executing cancellable?
+        if (startupTimers contains jobName) {
+          startupTimers(jobName).cancel()
+          startupTimers.remove(jobName)
+        }
+      }
+
       state match {
         case TaskState.TASK_RUNNING =>
           scheduler.handleStartedTask(taskStatus)
