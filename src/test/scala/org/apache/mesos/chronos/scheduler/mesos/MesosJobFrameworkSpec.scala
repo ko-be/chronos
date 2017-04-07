@@ -15,6 +15,9 @@ import org.mockito.Mockito._
 import org.mockito.Matchers
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationWithJUnit
+import org.apache.mesos.chronos.scheduler.jobs.MockJobUtils._
+import org.apache.mesos.chronos.scheduler.graph.JobGraph
+import org.joda.time.Seconds
 
 import scala.collection.mutable
 
@@ -294,10 +297,17 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
       Matchers.any[Collection[Protos.OfferID]],
       Matchers.any[Collection[Protos.TaskInfo]]) returns (Protos.Status.DRIVER_RUNNING)
 
+    val mockTaskManager = mock[TaskManager]
+    val jobGraph = new JobGraph
+    val mockPersistenceStore = mock[PersistenceStore]
+    val epsilon = Seconds.seconds(60).toPeriod
+
+    val scheduler = mockScheduler(epsilon, mockTaskManager, jobGraph, mockPersistenceStore)
+
     val mesosJobFramework = spy(
       new MesosJobFramework(
         mesosDriverFactory,
-        mock[JobScheduler],
+        scheduler,
         mock[TaskManager],
         makeConfig(),
         mock[FrameworkIdUtil],
