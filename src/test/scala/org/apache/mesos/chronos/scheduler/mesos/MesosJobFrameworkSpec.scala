@@ -338,6 +338,6 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     mesosJobFramework.runningTasks.get("foo") must beSome
     mesosJobFramework.runningTasks.get("foo").get.slaveId mustEqual ("slave1")
     mesosJobFramework.runningTasks.get("foo").get.taskStatus must beSome
-    mesosJobFramework.runningTasks.get("foo").get.taskStatus.get.getState mustEqual (Protos.TaskState.TASK_RUNNING)
+    mesosJobFramework.runningTasks.get("foo").get.taskStatus.get.getState mustEqual (Protos.TaskState.TASK_STAGING)
   }
 }

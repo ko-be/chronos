@@ -177,6 +177,7 @@ class MesosJobFramework @Inject() (
 
   def launchTasks(tasks: mutable.Buffer[(String, BaseJob, Offer)]) {
     import scala.collection.JavaConverters._
+    import scheduler.actorSystem.dispatcher
 
     tasks.groupBy(_._3).toIterable.foreach({
       case (offer, subTasks) =>
@@ -206,16 +207,13 @@ class MesosJobFramework @Inject() (
                 TaskID.newBuilder()
                   .setValue(task._1)
                   .build())
-              .setState(TaskState.TASK_RUNNING)
+              .setState(TaskState.TASK_STAGING)
               .build()
             runningTasks = runningTasks.+=(task._2.name -> new ChronosTask(task._3.getSlaveId.getValue, Some(initialStatus)))
 
             val lostStatus = TaskStatus.newBuilder(initialStatus)
               .setState(TaskState.TASK_LOST)
               .build()
-
-            import scheduler.actorSystem.dispatcher
-            log.info(scheduler.actorSystem.toString())
 
             val cancellable = scheduler.akkaScheduler.scheduleOnce(60 milliseconds) {
               statusUpdate(mesosDriver.get(), lostStatus)
@@ -253,8 +251,9 @@ class MesosJobFramework @Inject() (
       val (jobName, _, _, _) = TaskUtils.parseTaskId(taskId)
 
       if (state != TaskState.TASK_STAGING) {
-        // what happens when we cancel while executing cancellable?
         if (startupTimers contains jobName) {
+          // http://doc.akka.io/docs/akka/current/scala/scheduler.html#The_Cancellable_interface
+          // does not abort the execution of the task, if it had already been started
           startupTimers(jobName).cancel()
           startupTimers.remove(jobName)
         }
