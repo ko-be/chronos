@@ -15,8 +15,3 @@ chronos.tbz
 dependency-reduced-pom.xml
 .arcconfig
 dist
-.cache-main
-.cache-tests
-.classpath
-.project
-.settings
