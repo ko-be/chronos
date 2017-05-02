@@ -4,14 +4,16 @@ import akka.actor.ActorSystem
 import akka.actor.Scheduler
 import java.nio.charset.StandardCharsets
 import java.util.Collection
+
 import mesosphere.mesos.util.FrameworkIdUtil
-import mesosphere.mesos.protos.{ ScalarResource, Resource }
+import mesosphere.mesos.protos.{Resource, ScalarResource}
 import com.google.common.cache.Cache
 import org.apache.mesos.chronos.ChronosTestHelper._
-import org.apache.mesos.chronos.scheduler.jobs.{ ScheduleBasedJob, BaseJob, JobScheduler, TaskManager, JobsObserver, JobMetrics }
+import org.apache.mesos.chronos.scheduler.jobs.{BaseJob, JobMetrics, JobScheduler, JobsObserver, ScheduleBasedJob, TaskManager}
 import org.apache.mesos.chronos.schedule.ISO8601Parser
 import org.apache.mesos.chronos.scheduler.state.PersistenceStore
 import org.apache.mesos.Protos
+import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito._
 import org.mockito.Matchers
@@ -275,7 +277,7 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     there was one(jobScheduler).handleFailedTask(status)
   }
 
-  "Set initial status of a task to TASK_RUNNING" in {
+  "Set initial status of a task to TASK_STAGING" in {
     import mesosphere.mesos.protos.Implicits._
     import scala.collection.JavaConverters._
 
@@ -339,5 +341,75 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     mesosJobFramework.runningTasks.get("foo").get.slaveId mustEqual ("slave1")
     mesosJobFramework.runningTasks.get("foo").get.taskStatus must beSome
     mesosJobFramework.runningTasks.get("foo").get.taskStatus.get.getState mustEqual (Protos.TaskState.TASK_STAGING)
+  }
+
+  "Set initial status of a task to TASK_STAGING" in {
+    import mesosphere.mesos.protos.Implicits._
+    import scala.collection.JavaConverters._
+
+    val fakeOffer = Protos.Offer.newBuilder().setSlaveId(
+      Protos.SlaveID.newBuilder().setValue("slave1")).setId(
+      Protos.OfferID.newBuilder().setValue("offer")).setFrameworkId(
+      Protos.FrameworkID.newBuilder().setValue("framework")).setHostname("slave1").build()
+
+    val fakeJob = new ScheduleBasedJob(
+      schedule = ISO8601Parser("R1/2012-01-01T00:02:00.000Z/PT1M").get,
+      name = "foo",
+      command = "")
+
+    val fakeTasks = mutable.Buffer[(String, BaseJob, Protos.Offer)]()
+    fakeTasks.append(("ct:1454467003926:0:test2Execution:run", fakeJob, fakeOffer))
+
+    val mesosDriverFactory = mock[MesosDriverFactory]
+    val schedulerDriver = mock[SchedulerDriver]
+    mesosDriverFactory.get().returns(schedulerDriver)
+    schedulerDriver.launchTasks(
+      Matchers.any[Collection[Protos.OfferID]],
+      Matchers.any[Collection[Protos.TaskInfo]]) returns (Protos.Status.DRIVER_RUNNING)
+
+    val mockTaskManager = mock[TaskManager]
+    val jobGraph = new JobGraph
+    val mockPersistenceStore = mock[PersistenceStore]
+    mockPersistenceStore.getTasks.returns(Map())
+    val epsilon = Seconds.seconds(60).toPeriod
+    mockTaskManager.persistenceStore returns mockPersistenceStore
+    val taskCache = mock[Cache[String, Protos.TaskState]]
+    doNothing.when(taskCache).put(any, any)
+
+    mockTaskManager.taskCache returns taskCache
+
+    val mockScheduler = mock[Scheduler]
+    val mockActorSystem = mock[ActorSystem]
+
+    mockActorSystem.scheduler.returns(mockScheduler)
+
+    val scheduler = new JobScheduler(
+      scheduleHorizon = epsilon,
+      taskManager = mockTaskManager,
+      jobGraph = jobGraph,
+      persistenceStore = mockPersistenceStore,
+      jobMetrics = mock[JobMetrics],
+      jobsObserver = mock[JobsObserver.Observer],
+      actorSystem = ActorSystem())
+
+    val mesosJobFramework = spy(
+      new MesosJobFramework(
+        mesosDriverFactory,
+        scheduler,
+        mockTaskManager,
+        makeConfig(),
+        mock[FrameworkIdUtil],
+        new MesosTaskBuilder(makeConfig()),
+        mock[MesosOfferReviver]))
+
+    mesosJobFramework.launchTasks(fakeTasks)
+    val initialStatus = mesosJobFramework.runningTasks.get("foo").get.taskStatus.get
+    there was one(mesosJobFramework).scheduleLostStatusFromInitial(initialStatus)
+
+    val runningState = TaskStatus.newBuilder(initialStatus)
+      .setState(TaskState.TASK_RUNNING)
+      .build()
+    mesosJobFramework.statusUpdate(mesosJobFramework.mesosDriver.get(), runningState)
+    there was one(mesosJobFramework).cancelLostStatusUpdate("test2Execution")
   }
 }

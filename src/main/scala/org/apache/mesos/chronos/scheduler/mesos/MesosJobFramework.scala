@@ -22,7 +22,7 @@ import scala.concurrent.duration._
  * A class representing the runtime info of an in-flight task.
  * Associates a slaveID with a TaskStatus object.
  */
-case class ChronosTask(val slaveId: String, val taskStatus: Option[TaskStatus])
+case class ChronosTask(slaveId: String, taskStatus: Option[TaskStatus])
 
 /**
  * Provides the interface to chronos. Receives callbacks from chronos when resources are offered, declined etc.
@@ -175,9 +175,29 @@ class MesosJobFramework @Inject() (
     }
   }
 
+  def scheduleLostStatusFromInitial(initialStatus: TaskStatus): Cancellable = {
+    val lostStatus = TaskStatus.newBuilder(initialStatus)
+      .setState(TaskState.TASK_LOST)
+      .build()
+
+    import scheduler.actorSystem.dispatcher
+
+    scheduler.akkaScheduler.scheduleOnce(60 seconds) {
+      statusUpdate(mesosDriver.get(), lostStatus)
+    }
+  }
+
+  def cancelLostStatusUpdate(jobName: String): Unit = {
+    if (startupTimers contains jobName) {
+      // http://doc.akka.io/docs/akka/current/scala/scheduler.html#The_Cancellable_interface
+      // does not abort the execution of the task, if it had already been started
+      startupTimers(jobName).cancel()
+      startupTimers.remove(jobName)
+    }
+  }
+
   def launchTasks(tasks: mutable.Buffer[(String, BaseJob, Offer)]) {
     import scala.collection.JavaConverters._
-    import scheduler.actorSystem.dispatcher
 
     tasks.groupBy(_._3).toIterable.foreach({
       case (offer, subTasks) =>
@@ -211,13 +231,7 @@ class MesosJobFramework @Inject() (
               .build()
             runningTasks = runningTasks.+=(task._2.name -> new ChronosTask(task._3.getSlaveId.getValue, Some(initialStatus)))
 
-            val lostStatus = TaskStatus.newBuilder(initialStatus)
-              .setState(TaskState.TASK_LOST)
-              .build()
-
-            val cancellable = scheduler.akkaScheduler.scheduleOnce(60 milliseconds) {
-              statusUpdate(mesosDriver.get(), lostStatus)
-            }
+            val cancellable = scheduleLostStatusFromInitial(initialStatus)
             startupTimers = startupTimers.+=(task._2.name -> cancellable)
 
             log.info("Attempted launch of '%s' - waiting for StatusUpdate confirmation.".format(task._1))
@@ -251,12 +265,7 @@ class MesosJobFramework @Inject() (
       val (jobName, _, _, _) = TaskUtils.parseTaskId(taskId)
 
       if (state != TaskState.TASK_STAGING) {
-        if (startupTimers contains jobName) {
-          // http://doc.akka.io/docs/akka/current/scala/scheduler.html#The_Cancellable_interface
-          // does not abort the execution of the task, if it had already been started
-          startupTimers(jobName).cancel()
-          startupTimers.remove(jobName)
-        }
+        cancelLostStatusUpdate(jobName)
       }
 
       state match {
