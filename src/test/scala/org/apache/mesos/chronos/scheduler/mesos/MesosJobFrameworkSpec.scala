@@ -343,7 +343,7 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     mesosJobFramework.runningTasks.get("foo").get.taskStatus.get.getState mustEqual (Protos.TaskState.TASK_STAGING)
   }
 
-  "Set initial status of a task to TASK_STAGING" in {
+  "Ensure stuck tasks are killed" in {
     import mesosphere.mesos.protos.Implicits._
     import scala.collection.JavaConverters._
 
@@ -403,13 +403,19 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
         mock[MesosOfferReviver]))
 
     mesosJobFramework.launchTasks(fakeTasks)
-    val initialStatus = mesosJobFramework.runningTasks.get("foo").get.taskStatus.get
-    there was one(mesosJobFramework).scheduleLostStatusFromInitial(initialStatus)
+    val initialStatus =
+      mesosJobFramework.runningTasks.get("foo").get.taskStatus.get
+
+    there was one(mesosJobFramework).
+      scheduleKilledStatusFromInitial(initialStatus)
 
     val runningState = TaskStatus.newBuilder(initialStatus)
       .setState(TaskState.TASK_RUNNING)
       .build()
-    mesosJobFramework.statusUpdate(mesosJobFramework.mesosDriver.get(), runningState)
-    there was one(mesosJobFramework).cancelLostStatusUpdate("test2Execution")
+
+    mesosJobFramework.statusUpdate(
+      mesosJobFramework.mesosDriver.get(), runningState)
+
+    there was one(mesosJobFramework).cancelKilledStatusUpdate("test2Execution")
   }
 }
