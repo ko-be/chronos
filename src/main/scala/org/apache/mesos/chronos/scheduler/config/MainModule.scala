@@ -2,23 +2,23 @@ package org.apache.mesos.chronos.scheduler.config
 
 import java.lang.Thread.UncaughtExceptionHandler
 import java.util.concurrent.ScheduledThreadPoolExecutor
-import java.util.logging.{Level, Logger}
+import java.util.logging.{ Level, Logger }
 import javax.inject.Named
 
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ ActorRef, ActorSystem, Props }
 import akka.util.Timeout
 import com.codahale.metrics.MetricRegistry
-import com.google.common.util.concurrent.{ListeningScheduledExecutorService, MoreExecutors, ThreadFactoryBuilder}
-import com.google.inject.{AbstractModule, Inject, Provides, Singleton}
+import com.google.common.util.concurrent.{ ListeningScheduledExecutorService, MoreExecutors, ThreadFactoryBuilder }
+import com.google.inject.{ AbstractModule, Inject, Provides, Singleton }
 import mesosphere.chaos.http.HttpConf
 import mesosphere.mesos.util.FrameworkIdUtil
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.recipes.leader.LeaderLatch
 import org.apache.mesos.Scheduler
-import org.apache.mesos.chronos.notification.{HttpClient, JobNotificationObserver, MailClient, RavenClient, SlackClient}
+import org.apache.mesos.chronos.notification.{ HttpClient, JobNotificationObserver, MailClient, RavenClient, SlackClient }
 import org.apache.mesos.chronos.scheduler.graph.JobGraph
 import org.apache.mesos.chronos.scheduler.jobs.stats.JobStats
-import org.apache.mesos.chronos.scheduler.jobs.{JobMetrics, JobScheduler, JobsObserver, TaskManager}
+import org.apache.mesos.chronos.scheduler.jobs.{ JobMetrics, JobScheduler, JobsObserver, TaskManager }
 import org.apache.mesos.chronos.scheduler.mesos._
 import org.apache.mesos.chronos.scheduler.state.PersistenceStore
 import org.joda.time.Seconds
@@ -55,14 +55,15 @@ class MainModule(val config: SchedulerConfiguration with HttpConf)
   @Singleton
   @Provides
   def provideTaskScheduler(
-                            taskManager: TaskManager,
-                            dependencyScheduler: JobGraph,
-                            persistenceStore: PersistenceStore,
-                            mesosSchedulerDriver: MesosDriverFactory,
-                            curator: CuratorFramework,
-                            leaderLatch: LeaderLatch,
-                            jobsObserver: JobsObserver.Observer,
-                            metrics: JobMetrics): JobScheduler = {
+    taskManager: TaskManager,
+    dependencyScheduler: JobGraph,
+    persistenceStore: PersistenceStore,
+    mesosSchedulerDriver: MesosDriverFactory,
+    curator: CuratorFramework,
+    leaderLatch: LeaderLatch,
+    jobsObserver: JobsObserver.Observer,
+    metrics: JobMetrics,
+    actorSystem: ActorSystem): JobScheduler = {
     new JobScheduler(
       scheduleHorizon = Seconds.seconds(config.scheduleHorizonSeconds()).toPeriod,
       taskManager = taskManager,
@@ -75,7 +76,8 @@ class MainModule(val config: SchedulerConfiguration with HttpConf)
       jobsObserver = jobsObserver,
       failureRetryDelay = config.failureRetryDelayMs(),
       disableAfterFailures = config.disableAfterFailures(),
-      jobMetrics = metrics)
+      jobMetrics = metrics,
+      actorSystem = actorSystem)
   }
 
   @Singleton
@@ -120,8 +122,7 @@ class MainModule(val config: SchedulerConfiguration with HttpConf)
         endpointUrl <- config.httpNotificationUrl.get if !config.httpNotificationUrl.isEmpty
       } yield {
         create(classOf[HttpClient], endpointUrl, config.httpNotificationCredentials.get)
-      }
-    ).flatten
+      }).flatten
   }
 
   @Singleton
@@ -142,21 +143,21 @@ class MainModule(val config: SchedulerConfiguration with HttpConf)
   @Singleton
   @Inject
   def provideOfferReviverActor(
-                                system: ActorSystem,
-                                conf: SchedulerConfiguration,
-                                mesosDriverFactory: MesosDriverFactory,
-                                registry: MetricRegistry): ActorRef =
-  {
-    val props = MesosOfferReviverActor.props(conf, mesosDriverFactory, registry)
-    system.actorOf(props, MesosOfferReviverActor.NAME)
-  }
+    system: ActorSystem,
+    conf: SchedulerConfiguration,
+    mesosDriverFactory: MesosDriverFactory,
+    registry: MetricRegistry): ActorRef =
+    {
+      val props = MesosOfferReviverActor.props(conf, mesosDriverFactory, registry)
+      system.actorOf(props, MesosOfferReviverActor.NAME)
+    }
 
   @Provides
   @Singleton
   @Inject
   def provideOfferReviver(
-                           @Named(MesosOfferReviverActor.NAME) reviverRef: ActorRef,
-                           registry: MetricRegistry): MesosOfferReviver = {
+    @Named(MesosOfferReviverActor.NAME) reviverRef: ActorRef,
+    registry: MetricRegistry): MesosOfferReviver = {
     new MesosOfferReviverDelegate(reviverRef, registry)
   }
 }

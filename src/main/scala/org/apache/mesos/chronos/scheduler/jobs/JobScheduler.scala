@@ -1,8 +1,8 @@
 package org.apache.mesos.chronos.scheduler.jobs
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
-import java.util.concurrent.{TimeUnit, Executors, Future}
-import java.util.logging.{Level, Logger}
+import java.util.concurrent.atomic.{ AtomicBoolean, AtomicReference }
+import java.util.concurrent.{ TimeUnit, Executors, Future }
+import java.util.logging.{ Level, Logger }
 
 import akka.actor.ActorSystem
 import org.apache.mesos.chronos.core.RichRuntime
@@ -12,15 +12,15 @@ import org.apache.mesos.chronos.scheduler.state.PersistenceStore
 import com.google.common.util.concurrent.AbstractIdleService
 import com.google.inject.Inject
 import org.apache.curator.framework.CuratorFramework
-import org.apache.curator.framework.recipes.leader.{LeaderLatch, LeaderLatchListener}
+import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
 import org.apache.mesos.Protos.TaskStatus
 import org.joda.time.format.DateTimeFormat
-import org.joda.time.{DateTime, DateTimeZone, Duration, Period}
+import org.joda.time.{ DateTime, DateTimeZone, Duration, Period }
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
-import org.apache.mesos.chronos.schedule.{CronSchedule, Schedule, ISO8601Schedule}
+import org.apache.mesos.chronos.schedule.{ CronSchedule, Schedule, ISO8601Schedule }
 
 /**
  * Constructs concrete tasks given a  list of schedules and a global scheduleHorizon.
@@ -29,20 +29,21 @@ import org.apache.mesos.chronos.schedule.{CronSchedule, Schedule, ISO8601Schedul
  * A lot of the methods in this class are broken into small pieces to allow for better unit testing.
  * @author Florian Leibert (flo@leibert.de)
  */
-class JobScheduler @Inject()(val scheduleHorizon: Period,
-                             val taskManager: TaskManager,
-                             val jobGraph: JobGraph,
-                             val persistenceStore: PersistenceStore,
-                             val mesosDriver: MesosDriverFactory = null,
-                             val curator: CuratorFramework = null,
-                             val leaderLatch: LeaderLatch = null,
-                             val leaderPath: String = null,
-                             val jobsObserver: JobsObserver.Observer,
-                             val failureRetryDelay: Long = 60000,
-                             val disableAfterFailures: Long = 0,
-                             val jobMetrics: JobMetrics)
-//Allows us to let Chaos manage the lifecycle of this class.
-  extends AbstractIdleService {
+class JobScheduler @Inject() (val scheduleHorizon: Period,
+                              val taskManager: TaskManager,
+                              val jobGraph: JobGraph,
+                              val persistenceStore: PersistenceStore,
+                              val mesosDriver: MesosDriverFactory = null,
+                              val curator: CuratorFramework = null,
+                              val leaderLatch: LeaderLatch = null,
+                              val leaderPath: String = null,
+                              val jobsObserver: JobsObserver.Observer,
+                              val failureRetryDelay: Long = 60000,
+                              val disableAfterFailures: Long = 0,
+                              val jobMetrics: JobMetrics,
+                              val actorSystem: ActorSystem)
+    //Allows us to let Chaos manage the lifecycle of this class.
+    extends AbstractIdleService {
 
   val localExecutor = Executors.newFixedThreadPool(1)
   val schedulerThreadFuture = new AtomicReference[Future[_]]
@@ -50,7 +51,6 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   //This acts as the lock
   val lock = new Object
 
-  val actorSystem = ActorSystem()
   val akkaScheduler = actorSystem.scheduler
 
   //TODO(FL): Take some methods out of this class.
@@ -58,7 +58,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   val leader = new AtomicBoolean(false)
   private[this] val log = Logger.getLogger(getClass.getName)
 
-  var streams: List[ScheduleStream[Schedule]]  = List()
+  var streams: List[ScheduleStream[Schedule]] = List()
 
   def isLeader: Boolean = leader.get()
 
@@ -77,7 +77,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
     val TaskUtils.taskIdPattern(_, _, jobName, _) = taskId
     jobGraph.lookupVertex(jobName) match {
       case Some(baseJob: BaseJob) => baseJob.async
-      case _ => false
+      case _                      => false
     }
   }
 
@@ -185,17 +185,17 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       jobGraph.getChildren(job.name)
         .map(x => jobGraph.lookupVertex(x).get)
         .filter {
-        case j: DependencyBasedJob => true
-        case _ => false
-      }
+          case j: DependencyBasedJob => true
+          case _                     => false
+        }
         .map(x => x.asInstanceOf[DependencyBasedJob])
         .filter(x => x.parents.size > 1)
         .foreach({
-        childJob =>
-          log.info("Updating job %s".format(job.name))
-          val copy = childJob.copy(parents = childJob.parents.filter(_ != job.name))
-          updateJob(childJob, copy)
-      })
+          childJob =>
+            log.info("Updating job %s".format(job.name))
+            val copy = childJob.copy(parents = childJob.parents.filter(_ != job.name))
+            updateJob(childJob, copy)
+        })
 
       jobGraph.removeVertex(job)
       job match {
@@ -308,7 +308,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   /**
    * Mark job by job name as successful. Trigger any dependent children jobs that should be run as a result
    */
-  def markJobSuccessAndFireOffDependencies(jobName : String): Boolean = {
+  def markJobSuccessAndFireOffDependencies(jobName: String): Boolean = {
     val optionalJob = jobGraph.getJobForName(jobName)
     if (optionalJob.isEmpty) {
       log.warning("%s not found in job graph, not marking success".format(jobName))
@@ -361,7 +361,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
           if (!dependentJob.disabled) {
             val date = taskDate match {
               case Some(d) => d
-              case None => DateTime.now(DateTimeZone.UTC)
+              case None    => DateTime.now(DateTimeZone.UTC)
             }
             taskManager.enqueue(TaskUtils.getTaskId(dependentJob,
               date), dependentJob.highPriority)
@@ -708,7 +708,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
 
       stream match {
         case Some(stream) => scheduleStream(now, stream)
-        case None => stream
+        case None         => stream
       }
     }
   }
@@ -729,7 +729,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
     log.info("Adding schedule for time:" + now.toString(DateTimeFormat.fullTime()))
     lock.synchronized {
       log.fine("Starting iteration")
-      for(stream <- newStreams) {
+      for (stream <- newStreams) {
         if (!streams.exists(_.jobName == stream.jobName)) {
           streams = streams :+ stream
         }

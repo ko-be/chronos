@@ -6,7 +6,7 @@ import org.joda.time._
 import org.specs2.mock._
 import org.specs2.mutable._
 import MockJobUtils._
-import org.apache.mesos.chronos.schedule.{ISO8601Parser, ISO8601Schedule}
+import org.apache.mesos.chronos.schedule.{ ISO8601Parser, ISO8601Schedule }
 
 class JobSchedulerSpec extends SpecificationWithJUnit with Mockito {
 
@@ -57,7 +57,7 @@ class JobSchedulerSpec extends SpecificationWithJUnit with Mockito {
       val schedule = ISO8601Parser("R0/2012-01-01T00:00:01.000Z/PT1M").get
       val epsilon = Minutes.minutes(1).toPeriod
       val jobName = "FOO"
-      val job1 = new ScheduleBasedJob(schedule=schedule, name = jobName, command = "", epsilon = epsilon)
+      val job1 = new ScheduleBasedJob(schedule = schedule, name = jobName, command = "", epsilon = epsilon)
 
       val jobStream = new ScheduleStream(schedule, jobName)
 
