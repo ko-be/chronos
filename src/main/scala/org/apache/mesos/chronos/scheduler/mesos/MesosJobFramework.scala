@@ -202,14 +202,15 @@ class MesosJobFramework @Inject() (
     import scheduler.actorSystem.dispatcher
 
     log.info(
-      "Scheduling TASK_KILLED update for %s in 60 seconds".
+      "Scheduling TASK_KILLED update for %s in 120 seconds".
         format(lostStatus.getTaskId.getValue))
 
-    scheduler.akkaScheduler.scheduleOnce(60 seconds) {
+    scheduler.akkaScheduler.scheduleOnce(120 seconds) {
       log.info(
         "No status update for task %s, faking TASK_KILLED status update".
           format(lostStatus.getTaskId.getValue))
 
+      mesosDriver.get().killTask(lostStatus.getTaskId)
       statusUpdate(mesosDriver.get(), lostStatus)
     }
   }
