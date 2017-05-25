@@ -194,7 +194,8 @@ class MesosJobFramework @Inject() (
     }
   }
 
-  def scheduleKilledStatusFromInitial(initialStatus: TaskStatus): Cancellable = {
+  def scheduleKilledStatusFromInitial(initialStatus: TaskStatus,
+                                      timeout: Int): Cancellable = {
     val lostStatus = TaskStatus.newBuilder(initialStatus)
       .setState(TaskState.TASK_KILLED)
       .build()
@@ -202,15 +203,17 @@ class MesosJobFramework @Inject() (
     import scheduler.actorSystem.dispatcher
 
     log.info(
-      "Scheduling TASK_KILLED update for %s in 60 seconds".
-        format(lostStatus.getTaskId.getValue))
+      "Scheduling TASK_KILLED update for %s in %d seconds".
+        format(lostStatus.getTaskId.getValue, timeout))
 
-    scheduler.akkaScheduler.scheduleOnce(60 seconds) {
+    scheduler.akkaScheduler.scheduleOnce(timeout seconds) {
       log.info(
         "No status update for task %s, faking TASK_KILLED status update".
           format(lostStatus.getTaskId.getValue))
 
-      statusUpdate(mesosDriver.get(), lostStatus)
+    log.info("Killing task %s".format(lostStatus.getTaskId.getValue, timeout))
+    mesosDriver.get.killTask(lostStatus.getTaskId)
+    statusUpdate(mesosDriver.get, lostStatus)
     }
   }
 
@@ -272,7 +275,8 @@ class MesosJobFramework @Inject() (
               task._2.name -> ChronosTask(
                 task._3.getSlaveId.getValue, Some(initialStatus)))
 
-            val cancellable = scheduleKilledStatusFromInitial(initialStatus)
+            val cancellable = scheduleKilledStatusFromInitial(
+              initialStatus, task._2.startupTimeout)
             startupTimers = startupTimers.+=(task._2.name -> cancellable)
 
             log.info(
