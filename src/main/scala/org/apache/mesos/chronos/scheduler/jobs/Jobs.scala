@@ -87,7 +87,7 @@ trait BaseJob {
 
   def constraints: Seq[Constraint] = List()
 
-  def startupTimeout: Int = 300
+  def startupTimeout: Int = 600
 }
 
 @JsonDeserialize(using = classOf[JobDeserializer])
@@ -125,7 +125,7 @@ case class ScheduleBasedJob (
                              @JsonProperty override val softError: Boolean = false,
                              @JsonProperty override val dataProcessingJobType: Boolean = false,
                              @JsonProperty override val constraints: Seq[Constraint] = List(),
-                             @JsonProperty override val startupTimeout: Int = 300)
+                             @JsonProperty override val startupTimeout: Int = 600)
   extends BaseJob
 
 
@@ -163,5 +163,5 @@ case class DependencyBasedJob(
                                @JsonProperty override val softError: Boolean = false,
                                @JsonProperty override val dataProcessingJobType: Boolean = false,
                                @JsonProperty override val constraints: Seq[Constraint] = List(),
-                               @JsonProperty override val startupTimeout: Int = 300)
+                               @JsonProperty override val startupTimeout: Int = 600)
   extends BaseJob
