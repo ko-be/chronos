@@ -407,7 +407,7 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
       mesosJobFramework.runningTasks.get("foo").get.taskStatus.get
 
     there was one(mesosJobFramework).
-      scheduleKilledStatusFromInitial(initialStatus, 300)
+      scheduleKilledStatusFromInitial(initialStatus, 600)
 
     val runningState = TaskStatus.newBuilder(initialStatus)
       .setState(TaskState.TASK_RUNNING)
