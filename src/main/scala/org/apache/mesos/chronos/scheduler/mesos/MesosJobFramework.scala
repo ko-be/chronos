@@ -44,7 +44,8 @@ class MesosJobFramework @Inject() (
   private var lastReconciliation = DateTime.now.plusSeconds(
     config.reconciliationInterval())
   var runningTasks = new mutable.HashMap[String, ChronosTask]
-  var startupTimers = new mutable.HashMap[String, Cancellable]
+  var startupTimers = new mutable.HashMap[String, Cancellable] with
+      mutable.SynchronizedMap[String, Cancellable]
 
   /* Overridden methods from MesosScheduler */
   @Override
@@ -211,22 +212,21 @@ class MesosJobFramework @Inject() (
         "No status update for task %s, faking TASK_KILLED status update".
           format(lostStatus.getTaskId.getValue))
 
-    log.info("Killing task %s".format(lostStatus.getTaskId.getValue, timeout))
-    mesosDriver.get.killTask(lostStatus.getTaskId)
-    statusUpdate(mesosDriver.get, lostStatus)
+      log.info("Killing task %s".format(lostStatus.getTaskId.getValue, timeout))
+      mesosDriver.get.killTask(lostStatus.getTaskId)
+      statusUpdate(mesosDriver.get, lostStatus)
     }
   }
 
   def cancelKilledStatusUpdate(jobName: String): Unit = {
-    if (startupTimers contains jobName) {
+    startupTimers.remove(jobName) map {
       // http://doc.akka.io/docs/akka/current/scala/scheduler.html#
       // The_Cancellable_interface does not abort the execution of the task,
       // if it had already been started
       log.info(
         "Got status update for task %s, cancelling it's startup timer".
           format(jobName))
-      startupTimers(jobName).cancel()
-      startupTimers.remove(jobName)
+      _.cancel
     }
   }
 
@@ -277,7 +277,7 @@ class MesosJobFramework @Inject() (
 
             val cancellable = scheduleKilledStatusFromInitial(
               initialStatus, task._2.startupTimeout)
-            startupTimers = startupTimers.+=(task._2.name -> cancellable)
+            startupTimers += (task._2.name -> cancellable)
 
             log.info(
               "Attempted launch of %s - waiting for StatusUpdate confirmation.".
