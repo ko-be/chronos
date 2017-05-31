@@ -212,9 +212,9 @@ class MesosJobFramework @Inject() (
         "No status update for task %s, faking TASK_KILLED status update".
           format(lostStatus.getTaskId.getValue))
 
-    log.info("Killing task %s".format(lostStatus.getTaskId.getValue, timeout))
-    mesosDriver.get.killTask(lostStatus.getTaskId)
-    statusUpdate(mesosDriver.get, lostStatus)
+      log.info("Killing task %s".format(lostStatus.getTaskId.getValue, timeout))
+      mesosDriver.get.killTask(lostStatus.getTaskId)
+      statusUpdate(mesosDriver.get, lostStatus)
     }
   }
 
