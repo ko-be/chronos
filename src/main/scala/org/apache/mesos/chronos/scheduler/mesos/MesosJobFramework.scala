@@ -218,14 +218,14 @@ class MesosJobFramework @Inject() (
     }
   }
 
-  def cancelKilledStatusUpdate(jobName: String): Unit = {
-    startupTimers.remove(jobName) map {
+  def cancelKilledStatusUpdate(keyForTimer: String): Unit = {
+    startupTimers.remove(keyForTimer) map {
       // http://doc.akka.io/docs/akka/current/scala/scheduler.html#
       // The_Cancellable_interface does not abort the execution of the task,
       // if it had already been started
       log.info(
-        "Got status update for task %s, cancelling it's startup timer".
-          format(jobName))
+        "Got status update for task %s, cancelling it's startup timer"
+          .format(keyForTimer))
       _.cancel
     }
   }
@@ -277,7 +277,7 @@ class MesosJobFramework @Inject() (
 
             val cancellable = scheduleKilledStatusFromInitial(
               initialStatus, task._2.startupTimeout)
-            startupTimers += (task._2.name -> cancellable)
+            startupTimers += (task._1 -> cancellable)
 
             log.info(
               "Attempted launch of %s - waiting for StatusUpdate confirmation.".
@@ -315,7 +315,7 @@ class MesosJobFramework @Inject() (
       val (jobName, _, _, _) = TaskUtils.parseTaskId(taskId)
 
       if (state != TaskState.TASK_STAGING) {
-        cancelKilledStatusUpdate(jobName)
+        cancelKilledStatusUpdate(taskId)
       }
 
       state match {
