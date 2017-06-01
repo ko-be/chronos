@@ -406,6 +406,9 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     val initialStatus =
       mesosJobFramework.runningTasks.get("foo").get.taskStatus.get
 
+    mesosJobFramework.startupTimers.get(
+      "ct:1454467003926:0:test2Execution:run") must beSome
+
     there was one(mesosJobFramework).
       scheduleKilledStatusFromInitial(initialStatus, 600)
 
@@ -416,6 +419,10 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     mesosJobFramework.statusUpdate(
       mesosJobFramework.mesosDriver.get(), runningState)
 
-    there was one(mesosJobFramework).cancelKilledStatusUpdate("test2Execution")
+    there was one(mesosJobFramework).cancelKilledStatusUpdate(
+      "ct:1454467003926:0:test2Execution:run")
+
+    mesosJobFramework.startupTimers.get(
+      "ct:1454467003926:0:test2Execution:run") must beNone
   }
 }
