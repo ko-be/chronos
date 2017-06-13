@@ -522,9 +522,6 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     there was one(mesosJobFramework).cancelKilledStatusUpdate(
       "ct:1454467003926:0:test2Execution:run")
 
-    there was one(mesosJobFramework).cancelKilledStatusUpdate(
-      "ct:1454467003927:0:test2Execution:run")
-
     mesosJobFramework.startupTimers.get(
       "ct:1454467003926:0:test2Execution:run") must beNone
   }
