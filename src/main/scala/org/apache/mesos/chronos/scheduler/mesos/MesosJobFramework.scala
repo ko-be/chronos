@@ -249,7 +249,7 @@ class MesosJobFramework @Inject() (
             List(offer.getId).asJava, mesosTasks.asJava)
 
         if (status == Protos.Status.DRIVER_RUNNING) {
-          for (task <- tasks) {
+          for (task <- subTasks) {
             /**
               * we create a TaskStatus object so that this task gets picked up
               * in any reconciliations that occur between now and the next

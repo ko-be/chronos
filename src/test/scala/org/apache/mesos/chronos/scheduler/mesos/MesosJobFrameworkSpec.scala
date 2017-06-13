@@ -425,4 +425,107 @@ class MesosJobFrameworkSpec extends SpecificationWithJUnit with Mockito {
     mesosJobFramework.startupTimers.get(
       "ct:1454467003926:0:test2Execution:run") must beNone
   }
+
+  "Ensure tasks are tracked only once" in {
+    import mesosphere.mesos.protos.Implicits._
+    import scala.collection.JavaConverters._
+
+    val fakeOffer1 =
+      Protos.Offer.newBuilder()
+        .setSlaveId(Protos.SlaveID.newBuilder().setValue("slave1"))
+        .setId(Protos.OfferID.newBuilder().setValue("offer"))
+        .setFrameworkId(Protos.FrameworkID.newBuilder().setValue("framework"))
+        .setHostname("slave1")
+        .build()
+
+    val fakeOffer2 =
+      Protos.Offer.newBuilder()
+        .setSlaveId(Protos.SlaveID.newBuilder().setValue("slave2"))
+        .setId(Protos.OfferID.newBuilder().setValue("offer2"))
+        .setFrameworkId(Protos.FrameworkID.newBuilder().setValue("framework"))
+        .setHostname("slave2")
+        .build()
+
+    val fakeJob1 = new ScheduleBasedJob(
+      schedule = ISO8601Parser("R1/2012-01-01T00:02:00.000Z/PT1M").get,
+      name = "foo1",
+      command = "")
+
+    val fakeJob2 = new ScheduleBasedJob(
+      schedule = ISO8601Parser("R1/2012-01-01T00:02:00.000Z/PT1M").get,
+      name = "foo2",
+      command = "")
+
+    val fakeTasks = mutable.Buffer[(String, BaseJob, Protos.Offer)]()
+    fakeTasks.append(("ct:1454467003926:0:test2Execution:run", fakeJob1, fakeOffer1))
+    fakeTasks.append(("ct:1454467003927:0:test2Execution:run", fakeJob2, fakeOffer2))
+
+    val mesosDriverFactory = mock[MesosDriverFactory]
+    val schedulerDriver = mock[SchedulerDriver]
+    mesosDriverFactory.get().returns(schedulerDriver)
+    schedulerDriver.launchTasks(
+      Matchers.any[Collection[Protos.OfferID]],
+      Matchers.any[Collection[Protos.TaskInfo]]) returns (Protos.Status.DRIVER_RUNNING)
+
+    val mockTaskManager = mock[TaskManager]
+    val jobGraph = new JobGraph
+    val mockPersistenceStore = mock[PersistenceStore]
+    mockPersistenceStore.getTasks.returns(Map())
+    val epsilon = Seconds.seconds(60).toPeriod
+    mockTaskManager.persistenceStore returns mockPersistenceStore
+    val taskCache = mock[Cache[String, Protos.TaskState]]
+    doNothing.when(taskCache).put(any, any)
+
+    mockTaskManager.taskCache returns taskCache
+
+    val mockScheduler = mock[Scheduler]
+    val mockActorSystem = mock[ActorSystem]
+
+    mockActorSystem.scheduler.returns(mockScheduler)
+
+    val scheduler = new JobScheduler(
+      scheduleHorizon = epsilon,
+      taskManager = mockTaskManager,
+      jobGraph = jobGraph,
+      persistenceStore = mockPersistenceStore,
+      jobMetrics = mock[JobMetrics],
+      jobsObserver = mock[JobsObserver.Observer],
+      actorSystem = ActorSystem())
+
+    val mesosJobFramework = spy(
+      new MesosJobFramework(
+        mesosDriverFactory,
+        scheduler,
+        mockTaskManager,
+        makeConfig(),
+        mock[FrameworkIdUtil],
+        new MesosTaskBuilder(makeConfig()),
+        mock[MesosOfferReviver]))
+
+    mesosJobFramework.launchTasks(fakeTasks)
+    val initialStatus =
+      mesosJobFramework.runningTasks.get("foo1").get.taskStatus.get
+
+    mesosJobFramework.startupTimers.get(
+      "ct:1454467003926:0:test2Execution:run") must beSome
+
+    there was one(mesosJobFramework).
+      scheduleKilledStatusFromInitial(initialStatus, 600)
+
+    val runningState = TaskStatus.newBuilder(initialStatus)
+      .setState(TaskState.TASK_RUNNING)
+      .build()
+
+    mesosJobFramework.statusUpdate(
+      mesosJobFramework.mesosDriver.get(), runningState)
+
+    there was one(mesosJobFramework).cancelKilledStatusUpdate(
+      "ct:1454467003926:0:test2Execution:run")
+
+    there was one(mesosJobFramework).cancelKilledStatusUpdate(
+      "ct:1454467003927:0:test2Execution:run")
+
+    mesosJobFramework.startupTimers.get(
+      "ct:1454467003926:0:test2Execution:run") must beNone
+  }
 }
