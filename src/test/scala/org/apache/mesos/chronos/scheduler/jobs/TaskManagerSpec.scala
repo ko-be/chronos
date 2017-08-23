@@ -1,16 +1,22 @@
 package org.apache.mesos.chronos.scheduler.jobs
 
 import com.codahale.metrics.MetricRegistry
+
 import com.google.common.util.concurrent.ListeningScheduledExecutorService
 import org.apache.mesos.chronos.ChronosTestHelper._
 import org.apache.mesos.chronos.scheduler.graph.JobGraph
 import org.apache.mesos.chronos.scheduler.mesos.MesosOfferReviver
 import org.apache.mesos.chronos.scheduler.state.PersistenceStore
+import org.apache.mesos.chronos.schedule.ISO8601Parser
 import org.joda.time._
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecificationWithJUnit
 
 class TaskManagerSpec extends SpecificationWithJUnit with Mockito {
+  
+  val schedule = ISO8601Parser("R/2012-01-01T00:00:01.000Z/P1M").get
+  
+ 
   "TaskManager" should {
     "Calculate the correct time delay between scheduling and dispatching the job" in {
       val taskManager = new TaskManager(mock[ListeningScheduledExecutorService], mock[PersistenceStore],
@@ -31,7 +37,7 @@ class TaskManagerSpec extends SpecificationWithJUnit with Mockito {
         mockJobGraph, null, MockJobUtils.mockFullObserver, mock[MetricRegistry], makeConfig(),
         mock[MesosOfferReviver])
 
-      val job = new ScheduleBasedJob("R/2012-01-01T00:00:01.000Z/PT1M", "test", "sample-command")
+      val job = new ScheduleBasedJob(schedule, "test", "sample-command")
 
       mockJobGraph.lookupVertex("test").returns(Some(job)) // so we can enqueue a job.
       taskManager.enqueue("ct:1420843781398:0:test:", highPriority = true)
@@ -52,7 +58,7 @@ class TaskManagerSpec extends SpecificationWithJUnit with Mockito {
       val taskManager = new TaskManager(mock[ListeningScheduledExecutorService], mockPersistencStore,
         mockJobGraph, null, MockJobUtils.mockFullObserver, mock[MetricRegistry], config, mockMesosOfferReviver)
 
-      val job = new ScheduleBasedJob("R/2012-01-01T00:00:01.000Z/PT1M", "test", "sample-command")
+      val job = new ScheduleBasedJob(schedule, "test", "sample-command")
       mockJobGraph.lookupVertex("test").returns(Some(job)) // so we can enqueue a job.
 
       taskManager.enqueue("ct:1420843781398:0:test:", highPriority = true)
@@ -69,7 +75,7 @@ class TaskManagerSpec extends SpecificationWithJUnit with Mockito {
       val taskManager = new TaskManager(mock[ListeningScheduledExecutorService], mockPersistencStore,
         mockJobGraph, null, MockJobUtils.mockFullObserver, mock[MetricRegistry], config, mockMesosOfferReviver)
 
-      val job = new ScheduleBasedJob("R/2012-01-01T00:00:01.000Z/PT1M", "test", "sample-command")
+      val job = new ScheduleBasedJob(schedule, "test", "sample-command")
       mockJobGraph.lookupVertex("test").returns(Some(job)) // so we can enqueue a job.
 
       taskManager.enqueue("ct:1420843781398:0:test:", highPriority = true)

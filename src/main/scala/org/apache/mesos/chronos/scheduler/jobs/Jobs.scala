@@ -1,6 +1,7 @@
 package org.apache.mesos.chronos.scheduler.jobs
 
 import org.apache.mesos.chronos.scheduler.jobs.constraints.Constraint
+import org.apache.mesos.chronos.schedule.Schedule
 import org.apache.mesos.chronos.utils.JobDeserializer
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
@@ -85,11 +86,13 @@ trait BaseJob {
   def dataProcessingJobType: Boolean = false
 
   def constraints: Seq[Constraint] = List()
+
+  def startupTimeout: Int = 600
 }
 
 @JsonDeserialize(using = classOf[JobDeserializer])
-case class ScheduleBasedJob(
-                             @JsonProperty schedule: String,
+case class ScheduleBasedJob (
+                             @JsonProperty schedule: Schedule,
                              @JsonProperty override val name: String,
                              @JsonProperty override val command: String,
                              @JsonProperty override val epsilon: Period = Minutes.minutes(5).toPeriod,
@@ -121,7 +124,8 @@ case class ScheduleBasedJob(
                              @JsonProperty override val arguments: Seq[String] = List(),
                              @JsonProperty override val softError: Boolean = false,
                              @JsonProperty override val dataProcessingJobType: Boolean = false,
-                             @JsonProperty override val constraints: Seq[Constraint] = List())
+                             @JsonProperty override val constraints: Seq[Constraint] = List(),
+                             @JsonProperty override val startupTimeout: Int = 600)
   extends BaseJob
 
 
@@ -158,5 +162,6 @@ case class DependencyBasedJob(
                                @JsonProperty override val arguments: Seq[String] = List(),
                                @JsonProperty override val softError: Boolean = false,
                                @JsonProperty override val dataProcessingJobType: Boolean = false,
-                               @JsonProperty override val constraints: Seq[Constraint] = List())
+                               @JsonProperty override val constraints: Seq[Constraint] = List(),
+                               @JsonProperty override val startupTimeout: Int = 600)
   extends BaseJob

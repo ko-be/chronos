@@ -23,7 +23,7 @@ import mesosphere.chaos.validation.{ConstraintViolationExceptionMapper, JacksonM
 
 class ChronosRestModule extends ServletModule {
 
-  val guiceContainerUrl = "/scheduler/*"
+  val guiceContainerUrl = "/*"
 
   // Override these in a subclass to mount resources at a different path
   val pingUrl = "/ping"
@@ -68,8 +68,12 @@ class ChronosRestModule extends ServletModule {
     bind(classOf[TaskManagementResource]).in(Scopes.SINGLETON)
     bind(classOf[GraphManagementResource]).in(Scopes.SINGLETON)
     bind(classOf[StatsResource]).in(Scopes.SINGLETON)
+    bind(classOf[InfoResource]).in(Scopes.SINGLETON)
+    bind(classOf[LeaderResource]).in(Scopes.SINGLETON)
     bind(classOf[RedirectFilter]).in(Scopes.SINGLETON)
+    bind(classOf[CorsFilter]).in(Scopes.SINGLETON)
     //This filter will redirect to the master if running in HA mode.
+    filter("/*").through(classOf[CorsFilter])
     filter("/*").through(classOf[RedirectFilter])
   }
 }

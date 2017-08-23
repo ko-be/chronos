@@ -136,15 +136,27 @@ function(Backbone,
       var parts;
 
       if (!schedule) { return {}; }
-
+      
       parts = schedule.split('/');
+      
+      //try and make a reasonable guess about what
+      //type of schedule this is.
+      //this is kind of dumb, but I guess having 3 parts
+      //when split by / and starting with an R (which is invalid in cron)
+      //is a reasonable check.
+      if (parts.length == 3 && parts[0].startsWith('R')) {
+        return {
+          repeats: ScheduledJobModel.parseRepeats(parts[0]),
+          startDate: ScheduledJobModel.parseStartDate(parts[1]),
+          startTime: ScheduledJobModel.parseStartTime(parts[1]),
+          duration: ScheduledJobModel.parseDuration(parts[2])
+        };
 
-      return {
-        repeats: ScheduledJobModel.parseRepeats(parts[0]),
-        startDate: ScheduledJobModel.parseStartDate(parts[1]),
-        startTime: ScheduledJobModel.parseStartTime(parts[1]),
-        duration: ScheduledJobModel.parseDuration(parts[2])
-      };
+      } else {
+        //it's probably a cron schedule
+        return {}
+      }
+
     },
 
     parseRepeats: function(repeats) {

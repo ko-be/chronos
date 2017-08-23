@@ -41,11 +41,14 @@ class Iso8601JobResource @Inject()(
     try {
       val oldJobOpt = jobGraph.lookupVertex(newJob.name)
       if (oldJobOpt.isEmpty) {
-        log.info("Received request for job:" + newJob.toString)
-        require(JobUtils.isValidJobName(newJob.name),
-          "the job's name is invalid. Allowed names: '%s'".format(JobUtils.jobNamePattern.toString()))
-        if (!Iso8601Expressions.canParse(newJob.schedule, newJob.scheduleTimeZone))
-          return Response.status(Response.Status.BAD_REQUEST).build()
+        log.info("Received request for job:" + newJob.toString()) 
+        if(!JobUtils.isValidJobName(newJob.name)) {
+          log.info("Invalid job name %s".format(newJob.name))
+          return Response.status(Response.Status.BAD_REQUEST)
+          .entity("the job's name is invalid. Allowed names: '%s'".format(JobUtils.jobNamePattern.toString()))
+          .build()
+        }
+        
         if (!JobUtils.isValidURIDefinition(newJob)) {
           log.warning(s"Tried to add both uri (deprecated) and fetch parameters on ${newJob.name}")
           return Response.status(Response.Status.BAD_REQUEST).build()
@@ -58,10 +61,6 @@ class Iso8601JobResource @Inject()(
         Response.noContent().build()
       } else {
         val oldJob = oldJobOpt.get
-
-        if (!Iso8601Expressions.canParse(newJob.schedule, newJob.scheduleTimeZone)) {
-          return Response.status(Response.Status.BAD_REQUEST).build()
-        }
 
         oldJob match {
           case j: DependencyBasedJob =>

@@ -85,9 +85,11 @@ class TaskManager @Inject()(val listeningExecutor: ListeningScheduledExecutorSer
       //If the job was deleted after the taskId was added to the queue, the task could be empty.
       if (jobOption.isEmpty) {
         //remove invalid task
+        log.info(s"Job for task {taskId} has been deleted. Removing.")
         removeTask(taskId)
         None
       } else if (jobOption.get.disabled) {
+        log.info(s"Task ${taskId} ready for scheduling, but job ${jobOption.get.name} disabled. Ignoring.")
         jobsObserver.apply(JobExpired(jobOption.get, taskId))
         None
       } else {

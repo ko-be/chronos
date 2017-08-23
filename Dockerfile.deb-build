@@ -1,0 +1,17 @@
+FROM ubuntu:16.04
+MAINTAINER Toby Cole <tobyc@yelp.com>
+
+RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF
+
+RUN apt-get update && \
+    apt-get install -y maven \
+    unzip \
+    npm \
+    mesos \
+    wget
+
+RUN ln -s /usr/bin/nodejs /usr/bin/node
+
+RUN apt-get install -y --no-install-recommends ruby ruby-dev
+RUN gem install fpm

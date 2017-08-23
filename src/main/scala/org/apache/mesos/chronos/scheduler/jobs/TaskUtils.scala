@@ -79,6 +79,7 @@ object TaskUtils {
 
   def loadTasks(taskManager: TaskManager, persistenceStore: PersistenceStore) {
     val allTasks = persistenceStore.getTasks
+    log.info(allTasks.toString)
     val validTasks = TaskUtils.getDueTimes(allTasks)
 
     validTasks.foreach({ case (key, valueTuple) =>

@@ -1,32 +1,18 @@
 package org.apache.mesos.chronos.scheduler.jobs
 
+import org.apache.mesos.chronos.schedule.Nextable
+
 /**
  * A stream of schedules.
- * Calling tail will return a clipped schedule.
- * The schedule consists of a string representation of an ISO8601 expression as well as a BaseJob.
+ * Calling tail will return an Option[ScheduleStream], where the job at the head of the stream contains the next run.
+ * Each unit in the stream consists of a Schedule, a job name, and a schedule Time Zone (TODO: remove schedule time zone)
  * @author Florian Leibert (flo@leibert.de)
  */
-class ScheduleStream(val schedule: String, val jobName: String, val scheduleTimeZone: String = "") {
+class ScheduleStream[+T](val schedule: T, val jobName: String, val scheduleTimeZone: String = "")(implicit nextable: Nextable[T]) {
 
-  def head: (String, String, String) = (schedule, jobName, scheduleTimeZone)
+  def head: (T, String, String) = (schedule, jobName, scheduleTimeZone)
 
-  /**
-   * Returns a clipped schedule.
-   * @return
-   */
-  def tail: Option[ScheduleStream] =
-    //TODO(FL) Represent the schedule as a data structure instead of a string.
-    Iso8601Expressions.parse(schedule, scheduleTimeZone) match {
-      case Some((rec, start, per)) =>
-        if (rec == -1)
-          Some(new ScheduleStream(Iso8601Expressions.create(rec, start.plus(per), per), jobName,
-            scheduleTimeZone))
-        else if (rec > 0)
-          Some(new ScheduleStream(Iso8601Expressions.create(rec - 1, start.plus(per), per), jobName,
-            scheduleTimeZone))
-        else
-          None
-      case None =>
-        None
-    }
+  def tail() : Option[ScheduleStream[T]] = {
+    nextable.next(schedule).map(schedule => new ScheduleStream(schedule, jobName, scheduleTimeZone))
+  }
 }

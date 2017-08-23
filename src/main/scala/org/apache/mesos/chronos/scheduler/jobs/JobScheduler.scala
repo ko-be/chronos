@@ -1,23 +1,26 @@
 package org.apache.mesos.chronos.scheduler.jobs
 
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
-import java.util.concurrent.{TimeUnit, Executors, Future}
-import java.util.logging.{Level, Logger}
+import java.util.concurrent.atomic.{ AtomicBoolean, AtomicReference }
+import java.util.concurrent.{ TimeUnit, Executors, Future }
+import java.util.logging.{ Level, Logger }
 
 import akka.actor.ActorSystem
+import org.apache.mesos.chronos.core.RichRuntime
 import org.apache.mesos.chronos.scheduler.graph.JobGraph
 import org.apache.mesos.chronos.scheduler.mesos.MesosDriverFactory
 import org.apache.mesos.chronos.scheduler.state.PersistenceStore
 import com.google.common.util.concurrent.AbstractIdleService
 import com.google.inject.Inject
 import org.apache.curator.framework.CuratorFramework
-import org.apache.curator.framework.recipes.leader.{LeaderLatch, LeaderLatchListener}
+import org.apache.curator.framework.recipes.leader.{ LeaderLatch, LeaderLatchListener }
 import org.apache.mesos.Protos.TaskStatus
 import org.joda.time.format.DateTimeFormat
-import org.joda.time.{DateTime, DateTimeZone, Duration, Period}
+import org.joda.time.{ DateTime, DateTimeZone, Duration, Period }
 
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
+import scala.concurrent.ExecutionContext
+import org.apache.mesos.chronos.schedule.{ CronSchedule, Schedule, ISO8601Schedule }
 
 /**
  * Constructs concrete tasks given a  list of schedules and a global scheduleHorizon.
@@ -26,20 +29,21 @@ import scala.collection.mutable.ListBuffer
  * A lot of the methods in this class are broken into small pieces to allow for better unit testing.
  * @author Florian Leibert (flo@leibert.de)
  */
-class JobScheduler @Inject()(val scheduleHorizon: Period,
-                             val taskManager: TaskManager,
-                             val jobGraph: JobGraph,
-                             val persistenceStore: PersistenceStore,
-                             val mesosDriver: MesosDriverFactory = null,
-                             val curator: CuratorFramework = null,
-                             val leaderLatch: LeaderLatch = null,
-                             val leaderPath: String = null,
-                             val jobsObserver: JobsObserver.Observer,
-                             val failureRetryDelay: Long = 60000,
-                             val disableAfterFailures: Long = 0,
-                             val jobMetrics: JobMetrics)
-//Allows us to let Chaos manage the lifecycle of this class.
-  extends AbstractIdleService {
+class JobScheduler @Inject() (val scheduleHorizon: Period,
+                              val taskManager: TaskManager,
+                              val jobGraph: JobGraph,
+                              val persistenceStore: PersistenceStore,
+                              val mesosDriver: MesosDriverFactory = null,
+                              val curator: CuratorFramework = null,
+                              val leaderLatch: LeaderLatch = null,
+                              val leaderPath: String = null,
+                              val jobsObserver: JobsObserver.Observer,
+                              val failureRetryDelay: Long = 60000,
+                              val disableAfterFailures: Long = 0,
+                              val jobMetrics: JobMetrics,
+                              val actorSystem: ActorSystem)
+    //Allows us to let Chaos manage the lifecycle of this class.
+    extends AbstractIdleService {
 
   val localExecutor = Executors.newFixedThreadPool(1)
   val schedulerThreadFuture = new AtomicReference[Future[_]]
@@ -47,14 +51,14 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   //This acts as the lock
   val lock = new Object
 
-  val actorSystem = ActorSystem()
   val akkaScheduler = actorSystem.scheduler
 
   //TODO(FL): Take some methods out of this class.
   val running = new AtomicBoolean(false)
   val leader = new AtomicBoolean(false)
   private[this] val log = Logger.getLogger(getClass.getName)
-  var streams: List[ScheduleStream] = List()
+
+  var streams: List[ScheduleStream[Schedule]] = List()
 
   def isLeader: Boolean = leader.get()
 
@@ -73,7 +77,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
     val TaskUtils.taskIdPattern(_, _, jobName, _) = taskId
     jobGraph.lookupVertex(jobName) match {
       case Some(baseJob: BaseJob) => baseJob.async
-      case _ => false
+      case _                      => false
     }
   }
 
@@ -90,7 +94,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       case scheduleBasedJob: ScheduleBasedJob =>
         lock.synchronized {
           if (!scheduleBasedJob.disabled) {
-            val newStreams = List(JobUtils.makeScheduleStream(scheduleBasedJob, DateTime.now(DateTimeZone.UTC)))
+            val newStreams = List(JobUtils.makeScheduleStreamForDate(scheduleBasedJob, DateTime.now(DateTimeZone.UTC)))
               .filter(_.nonEmpty).map(_.get)
             if (newStreams.nonEmpty) {
               log.info("updating ScheduleBasedJob:" + scheduleBasedJob.toString)
@@ -126,7 +130,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   /**
    * This method should be used to register jobs.
    */
-  def registerJob(jobs: List[BaseJob], persist: Boolean = false, dateTime: DateTime = DateTime.now(DateTimeZone.UTC)) {
+  def registerJob(jobs: List[BaseJob], persist: Boolean = false, dateTime: DateTime = DateTime.now(DateTimeZone.UTC)) = {
     lock.synchronized {
       require(isLeader, "Cannot register a job with this scheduler, not the leader!")
       val scheduleBasedJobs = ListBuffer[ScheduleBasedJob]()
@@ -143,7 +147,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       }
 
       if (scheduleBasedJobs.nonEmpty) {
-        val newStreams = scheduleBasedJobs.filter(!_.disabled).map(JobUtils.makeScheduleStream(_, dateTime)).filter(_.nonEmpty).map(_.get)
+        val newStreams = scheduleBasedJobs.filter(!_.disabled).map(JobUtils.makeScheduleStreamForDate(_, dateTime)).filter(_.nonEmpty).map(_.get)
         scheduleBasedJobs.foreach({
           job =>
             jobGraph.addVertex(job)
@@ -181,17 +185,17 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       jobGraph.getChildren(job.name)
         .map(x => jobGraph.lookupVertex(x).get)
         .filter {
-        case j: DependencyBasedJob => true
-        case _ => false
-      }
+          case j: DependencyBasedJob => true
+          case _                     => false
+        }
         .map(x => x.asInstanceOf[DependencyBasedJob])
         .filter(x => x.parents.size > 1)
         .foreach({
-        childJob =>
-          log.info("Updating job %s".format(job.name))
-          val copy = childJob.copy(parents = childJob.parents.filter(_ != job.name))
-          updateJob(childJob, copy)
-      })
+          childJob =>
+            log.info("Updating job %s".format(job.name))
+            val copy = childJob.copy(parents = childJob.parents.filter(_ != job.name))
+            updateJob(childJob, copy)
+        })
 
       jobGraph.removeVertex(job)
       job match {
@@ -243,7 +247,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
 
   /**
    * Takes care of follow-up actions for a finished task, i.e. update the job schedule in the persistence store or
-   * launch tasks for dependent jobs
+   * launch tasks for dependent job
    */
   def handleFinishedTask(taskStatus: TaskStatus, taskDate: Option[DateTime] = None) {
     // `taskDate` is purely for unit testing
@@ -268,33 +272,35 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
       jobsObserver.apply(JobFinished(job, taskStatus, attempt))
 
       val newJob = getNewSuccessfulJob(job)
+      log.info(s"Marking job ${jobOption.get.name} with success. Last success ${newJob.lastSuccess}")
       replaceJob(job, newJob)
       processDependencies(jobName, taskDate)
 
       log.fine("Cleaning up finished task '%s'".format(taskId))
 
       /* TODO(FL): Fix.
-         Cleanup potentially exhausted job. Note, if X tasks were fired within a short period of time (~ execution time
-        of the job, the first returning Finished-task may trigger deletion of the job! This is a known limitation and
-        needs some work but should only affect long running frequent finite jobs or short finite jobs with a tiny pause
-        in between */
+      Cleanup potentially exhausted job. Note, if X tasks were fired within a short period of time (~ execution time
+      of the job, the first returning Finished-task may trigger deletion of the job! This is a known limitation and
+      needs some work but should only affect long running frequent finite jobs or short finite jobs with a tiny pause
+      in between
+      */
       job match {
         case job: ScheduleBasedJob =>
           val scheduleBasedJob: ScheduleBasedJob = newJob.asInstanceOf[ScheduleBasedJob]
-          Iso8601Expressions.parse(scheduleBasedJob.schedule, scheduleBasedJob.scheduleTimeZone) match {
-            case Some((recurrences, _, _)) =>
-              if (recurrences == 0) {
-                log.info("Disabling job that reached a zero-recurrence count!")
-
-                val disabledJob: ScheduleBasedJob = scheduleBasedJob.copy(disabled = true)
-                jobsObserver.apply(JobDisabled(job, """Job '%s' has exhausted all of its recurrences and has been disabled.
-                                                        |Please consider either removing your job, or updating its schedule and re-enabling it.
-                                                      """.stripMargin.format(job.name)))
-                replaceJob(scheduleBasedJob, disabledJob)
-              }
-            case None =>
+          scheduleBasedJob.schedule.recurrences match {
+            case 0 => {
+              log.info("Disabling job %s that reached a zero-recurrence count!".format(jobName))
+              val disabledJob: ScheduleBasedJob = scheduleBasedJob.copy(disabled = true)
+              jobsObserver.apply(JobDisabled(job, """Job '%s' has exhausted all of its recurrences and has been disabled.
+                                                    |Please consider either removing your job, or updating its schedule and re-enabling it.
+                                                  """.stripMargin.format(job.name)))
+              replaceJob(scheduleBasedJob, disabledJob)
+            }
+            case _ =>
           }
+        //nothing to do for dependent jobs here
         case _ =>
+
       }
     }
   }
@@ -302,7 +308,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   /**
    * Mark job by job name as successful. Trigger any dependent children jobs that should be run as a result
    */
-  def markJobSuccessAndFireOffDependencies(jobName : String): Boolean = {
+  def markJobSuccessAndFireOffDependencies(jobName: String): Boolean = {
     val optionalJob = jobGraph.getJobForName(jobName)
     if (optionalJob.isEmpty) {
       log.warning("%s not found in job graph, not marking success".format(jobName))
@@ -321,6 +327,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   }
 
   private def getNewSuccessfulJob(job: BaseJob): BaseJob = {
+    log.info("Marking job %s as success".format(job.name))
     val newJob = job match {
       case job: ScheduleBasedJob =>
         job.copy(successCount = job.successCount + 1,
@@ -346,7 +353,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   private def processDependencies(jobName: String, taskDate: Option[DateTime]) {
     val dependents = jobGraph.getExecutableChildren(jobName)
     if (dependents.nonEmpty) {
-      log.fine("%s has dependents: %s .".format(jobName, dependents.mkString(",")))
+      log.info("%s has dependents: %s .".format(jobName, dependents.mkString(",")))
       dependents.foreach {
         //TODO(FL): Ensure that the job for the given x exists. Lock.
         x =>
@@ -354,16 +361,16 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
           if (!dependentJob.disabled) {
             val date = taskDate match {
               case Some(d) => d
-              case None => DateTime.now(DateTimeZone.UTC)
+              case None    => DateTime.now(DateTimeZone.UTC)
             }
             taskManager.enqueue(TaskUtils.getTaskId(dependentJob,
               date), dependentJob.highPriority)
 
-            log.fine("Enqueued depedent job." + x)
+            log.info("Enqueued depedent job." + x)
           }
       }
     } else {
-      log.fine("%s does not have any ready dependents.".format(jobName))
+      log.info("%s does not have any ready dependents.".format(jobName))
     }
   }
 
@@ -391,7 +398,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
           }
 
           if (hasAttemptsLeft && (job.lastError.length == 0 || hadRecentSuccess)) {
-            log.warning("Retrying job: %s, attempt: %d".format(jobName, attempt))
+            log.info("Retrying job: %s, attempt: %d".format(jobName, attempt))
             /* Schedule the retry up to 60 seconds in the future */
             val delayDuration = new Duration(failureRetryDelay)
             val newTaskId = TaskUtils.getTaskId(job, DateTime.now(DateTimeZone.UTC)
@@ -416,6 +423,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
             val newJob = {
               job match {
                 case job: ScheduleBasedJob =>
+                  log.info(job.schedule.toString())
                   job.copy(errorCount = job.errorCount + 1,
                     errorsSinceLastSuccess = job.errorsSinceLastSuccess + 1,
                     lastError = lastErrorTime.toString, disabled = disableJob)
@@ -476,7 +484,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
    * @param schedules schedules to be processed
    * @return list of updated schedules
    */
-  def iteration(dateTime: DateTime, schedules: List[ScheduleStream]): List[ScheduleStream] = {
+  def iteration[T <: Schedule](dateTime: DateTime, schedules: List[ScheduleStream[T]]): List[ScheduleStream[T]] = {
     log.info("Checking schedules with time horizon:%s".format(scheduleHorizon.toString))
     removeOldSchedules(schedules.map(s => scheduleStream(dateTime, s)))
   }
@@ -488,6 +496,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
         log.info("Size of streams: %d".format(streams.size))
         streams = iteration(dateSupplier(), streams)
       }
+      log.info(s"Scheduler sleeping for ${scheduleHorizon.toStandardDuration.getMillis}ms")
       Thread.sleep(scheduleHorizon.toStandardDuration.getMillis)
       //TODO(FL): This can be inaccurate if the horizon >= 1D on daylight savings day and when leap seconds are introduced.
     }
@@ -495,7 +504,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
   }
 
   /**
-   * Given a stream and a DateTime(@see org.joda.DateTime), this method returns a 2-tuple with a ScheduleTask and
+   * Given a ScheduleStream[T] and a DateTime(@see org.joda.DateTime), this method returns a 2-tuple with a ScheduleTask and
    * a clipped schedule stream in case that the ScheduleTask was not none. Returns no task and the input stream,
    * if nothing needs scheduling within the time horizon.
    * @param now time to start iteration with
@@ -503,7 +512,7 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
    * @return
    */
   @tailrec
-  final def next(now: DateTime, stream: ScheduleStream): (Option[ScheduledTask], Option[ScheduleStream]) = {
+  final def next[T <: Schedule](now: DateTime, stream: ScheduleStream[T]): (Option[ScheduledTask], Option[ScheduleStream[T]]) = {
     val (schedule, jobName, scheduleTimeZone) = stream.head
 
     log.info("Calling next for stream: %s, jobname: %s".format(stream.schedule, jobName))
@@ -526,48 +535,44 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
         log.warning(s"Corrupt job in stream for $jobName")
     }
 
-    Iso8601Expressions.parse(schedule, scheduleTimeZone) match {
-      case Some((recurrences, nextDate, _)) =>
-        log.finest("Recurrences: '%d', next date: '%s'".format(recurrences, stream.schedule))
-        //nextDate has to be > (now - epsilon) & < (now + timehorizon) , for it to be scheduled!
-        if (recurrences == 0) {
-          log.info("Finished all recurrences of job '%s'".format(jobName))
-          //We're not removing the job here because it may still be required if a pending task fails.
-          (None, None)
-        } else {
-          val job = jobOption.get
-          val scheduleWindowBegin = now.minus(job.epsilon)
-          val scheduleWindowEnd = now.plus(scheduleHorizon)
-          if (nextDate.isAfter(scheduleWindowBegin) && nextDate.isBefore(scheduleWindowEnd)) {
-            log.info("Task ready for scheduling: %s".format(nextDate))
-            //TODO(FL): Rethink passing the dispatch queue all the way down to the ScheduledTask.
-            val task = new ScheduledTask(TaskUtils.getTaskId(job, nextDate), nextDate, job, taskManager)
-            return (Some(task), stream.tail)
-          }
-          // Next instance is too far in the future
-          // Needs to be scheduled at a later time, after schedule horizon.
-          if (!nextDate.isBefore(now)) {
-            return (None, Some(stream))
-          }
-          // Next instance is too far in the past (beyond epsilon)
-          //TODO(FL): Think about the semantics here and see if it always makes sense to skip ahead of missed schedules.
-          log.fine("No need to work on schedule: '%s' yet".format(nextDate))
-          jobsObserver.apply(JobSkipped(job, nextDate))
-          val tail = stream.tail
-          if (tail.isEmpty) {
-            //TODO(FL): Verify that this can go.
-            persistenceStore.removeJob(job)
-            log.warning("\n\nWARNING\n\nReached the tail of the streams which should have been never reached \n\n")
-            (None, None)
-          } else {
-            log.info("tail: " + tail.get.schedule + " now: " + now)
-            next(now, tail.get)
-          }
-        }
-      case None =>
-        log.warning(s"Couldn't parse date for $jobName")
-        (None, Some(stream))
+    //nextDate has to be > (now - epsilon) & < (now + timehorizon) , for it to be scheduled!
+    if (schedule.recurrences == 0) {
+      log.info("Finished all recurrences of job '%s'".format(jobName))
+      //We're not removing the job here because it may still be required if a pending task fails.
+      (None, None)
+    } else {
+      val job = jobOption.get
+      val scheduleWindowBegin = now.minus(job.epsilon)
+      val scheduleWindowEnd = now.plus(scheduleHorizon)
+      if (schedule.start.isAfter(scheduleWindowBegin) && schedule.start.isBefore(scheduleWindowEnd)) {
+        log.info("Job %s ready for scheduling at %s".format(jobName, schedule.start))
+        //TODO(FL): Rethink passing the dispatch queue all the way down to the ScheduledTask.
+        val task = new ScheduledTask(TaskUtils.getTaskId(job, schedule.start), schedule.start, job, taskManager)
+        log.info(task.due.toString())
+        return (Some(task), stream.tail)
+      }
+      // Next instance is too far in the future
+      // Needs to be scheduled at a later time, after schedule horizon.
+      if (!schedule.start.isBefore(now)) {
+        log.info("Next iteration for job %s is at %s: too far in the future; not scheduling in this schedule horizon.".format(jobName, schedule.start))
+        return (None, Some(stream))
+      }
+      // Next instance is too far in the past (beyond epsilon)
+      //TODO(FL): Think about the semantics here and see if it always makes sense to skip ahead of missed schedules.
+      log.info("Job %s with start date %s is scheduled for the past: skipping".format(jobName, schedule.start))
+      jobsObserver.apply(JobSkipped(job, schedule.start))
+      val tail = stream.tail
+      if (tail.isEmpty) {
+        //TODO(FL): Verify that this can go.
+        persistenceStore.removeJob(job)
+        log.warning("\n\nWARNING\n\nReached the tail of the streams which should have been never reached \n\n")
+        (None, None)
+      } else {
+        log.info("tail for job %s: %s. now: %s".format(jobName, tail.get.schedule, now))
+        next(now, tail.get)
+      }
     }
+
   }
 
   def removeSchedule(deletedStream: BaseJob) {
@@ -607,10 +612,12 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
 
   //Begin Leader interface, which is required for CandidateImpl.
   def onDefeated() {
-    mesosDriver.close()
-
-    log.info("Defeated. Not the current leader.")
+    implicit val exitExecutor = ExecutionContext.fromExecutor(Executors.newSingleThreadExecutor)
+    log.info("Defeated. Not the current leader. Shutting down.")
     running.set(false)
+    val runtime = RichRuntime()
+    runtime.asyncExit()
+
     jobGraph.reset() // So we can rebuild it later.
     schedulerThreadFuture.get.cancel(true)
   }
@@ -652,16 +659,17 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
     mesosDriver.start()
   }
 
-  // Generates a new ScheduleStream based on a DateTime and a ScheduleStream. Side effects of this method
-  // are that a new Job may be persisted in the underlying persistence store and a task might get dispatched.
+  // Generates a new ScheduleStream based on a DateTime and a ScheduleStream.
+  // This schedule stream will generate *and schedule* all tasks for a given job that fall
+  // inside of the schedule Horizon.
   @tailrec
-  private final def scheduleStream(now: DateTime, s: ScheduleStream): Option[ScheduleStream] = {
+  private final def scheduleStream[T <: Schedule](now: DateTime, s: ScheduleStream[T]): Option[ScheduleStream[T]] = {
     val (taskOption, stream) = next(now, s)
     if (taskOption.isEmpty) {
       stream
     } else {
       val encapsulatedJob = taskOption.get.job
-      log.info("Scheduling:" + taskOption.get.job.name)
+      log.info("Scheduling: " + taskOption.get.job.name)
       taskManager.scheduleDelayedTask(taskOption.get, taskManager.getMillisUntilExecution(taskOption.get.due), persist = true)
       /*TODO(FL): This needs some refactoring. Ideally, the task should only be persisted once it has been submitted
                   to chronos, however if we were to do this with the current design, there could be missed tasks if
@@ -683,7 +691,6 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
                   ...
        */
 
-
       /* TODO(FL): The invocation count only represents the number of job invocations, not the number of successful
          executions. When a scheduler starts up, it needs to verify that there are no pending tasks.
          This isn't really transactional but should be sufficiently reliable for most usecases. To outline why it is not
@@ -699,16 +706,16 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
           log.warning(s"Job ${encapsulatedJob.name} is not a scheduled job!")
       }
 
-      if (stream.isEmpty) {
-        return stream
+      stream match {
+        case Some(stream) => scheduleStream(now, stream)
+        case None         => stream
       }
-      scheduleStream(now, stream.get)
     }
   }
 
   //End Service interface
 
-  private def removeOldSchedules(scheduleStreams: List[Option[ScheduleStream]]): List[ScheduleStream] = {
+  private def removeOldSchedules[T <: Schedule](scheduleStreams: List[Option[ScheduleStream[T]]]): List[ScheduleStream[T]] = {
     log.fine("Filtering out empty streams")
     scheduleStreams.filter(s => s.isDefined && s.get.tail.isDefined).map(_.get)
   }
@@ -718,11 +725,17 @@ class JobScheduler @Inject()(val scheduleHorizon: Period,
    * @param now time from which to evaluate schedule
    * @param newStreams new schedules to be evaluated
    */
-  private def addSchedule(now: DateTime, newStreams: List[ScheduleStream]) {
+  private def addSchedule[T <: Schedule](now: DateTime, newStreams: List[ScheduleStream[Schedule]]) {
     log.info("Adding schedule for time:" + now.toString(DateTimeFormat.fullTime()))
     lock.synchronized {
       log.fine("Starting iteration")
-      streams = iteration(now, newStreams ++ streams)
+      for (stream <- newStreams) {
+        if (!streams.exists(_.jobName == stream.jobName)) {
+          streams = streams :+ stream
+        }
+      }
+
+      streams = iteration(now, streams)
       log.fine("Size of streams: %d".format(streams.size))
     }
   }
