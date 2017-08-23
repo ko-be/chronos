@@ -55,6 +55,8 @@ class ChronosRestModule extends ServletModule {
     bind(classOf[LogConfigServlet]).in(Scopes.SINGLETON)
     bind(classOf[RequiredFieldMissingExceptionMapper]).in(Scopes.SINGLETON)
     bind(classOf[ConstraintViolationExceptionMapper]).in(Scopes.SINGLETON)
+    bind(classOf[JsonMappingExceptionMapper]).in(Scopes.SINGLETON)
+    bind(classOf[GenericExceptionMapper]).in(Scopes.SINGLETON)
 
     serve(pingUrl).`with`(classOf[PingServlet])
     serve(metricsUrl).`with`(classOf[MetricsServlet])
@@ -62,7 +64,7 @@ class ChronosRestModule extends ServletModule {
     serve(guiceContainerUrl).`with`(classOf[GuiceContainer])
 
     bind(classOf[Iso8601JobResource]).in(Scopes.SINGLETON)
-    bind(classOf[CronJobResource]).in(Scopes.SINGLETON)
+    //bind(classOf[CronJobResource]).in(Scopes.SINGLETON)
     bind(classOf[DependentJobResource]).in(Scopes.SINGLETON)
     bind(classOf[JobManagementResource]).in(Scopes.SINGLETON)
     bind(classOf[TaskManagementResource]).in(Scopes.SINGLETON)
