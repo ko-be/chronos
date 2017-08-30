@@ -1,4 +1,4 @@
-FROM ubuntu:14.04
+FROM ubuntu:16.04
 
 RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list && \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF && \
@@ -6,7 +6,7 @@ RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources
     apt-get install -y maven \
     npm \
     default-jdk \
-    mesos \
+    mesos=1.0.1-2.0.93.ubuntu1404 \
     scala \
     curl && \
     apt-get clean all && \
