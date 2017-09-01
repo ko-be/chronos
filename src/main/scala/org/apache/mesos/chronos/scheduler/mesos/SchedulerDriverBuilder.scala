@@ -20,7 +20,9 @@ class SchedulerDriverBuilder {
                 frameworkId: Option[FrameworkID],
                 scheduler: Scheduler): SchedulerDriver = {
     def buildCredentials(principal: String, secretFile: String): Credential = {
-      val credentialBuilder = Credential.newBuilder().setPrincipal(principal)
+      // val credentialBuilder = Credential.newBuilder().setPrincipal(principal)
+      // from https://github.com/mesos/chronos/pull/802/files
+      val credentialBuilder = Credential.newBuilder().setPrincipalBytes(ByteString.copyFromUtf8(principal))
 
       try {
         val secretBytes = ByteString.readFrom(new FileInputStream(secretFile))
@@ -29,7 +31,9 @@ class SchedulerDriverBuilder {
         if ((filePermissions & Set(PosixFilePermission.OTHERS_READ, PosixFilePermission.OTHERS_WRITE)).nonEmpty)
           log.warning(s"Secret file $secretFile should not be globally accessible.")
 
-        credentialBuilder.setSecret(secretBytes.toString)
+        // credentialBuilder.setSecret(secretBytes.toString)
+        // from https://github.com/mesos/chronos/pull/802/files
+        credentialBuilder.setSecretBytes(secretBytes)
       }
       catch {
         case cause: Throwable =>
