@@ -1,6 +1,9 @@
 FROM ubuntu:16.04
 MAINTAINER Toby Cole <tobyc@yelp.com>
 
+# 16.04 needed BUILDING ONLY for newer Maven release
+# https://stackoverflow.com/questions/17781746/java-lang-classnotfoundexception-org-apache-commons-lang-stringutils-from-basec
+
 RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources.list.d/mesosphere.list && \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E56151BF
 
