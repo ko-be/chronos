@@ -6,7 +6,7 @@ RUN echo "deb http://repos.mesosphere.io/ubuntu/ trusty main" > /etc/apt/sources
     apt-get install -y maven \
     npm \
     default-jdk \
-    mesos \
+    mesos=1.0.1-2.0.93.ubuntu1404 \
     scala \
     curl && \
     apt-get clean all && \
