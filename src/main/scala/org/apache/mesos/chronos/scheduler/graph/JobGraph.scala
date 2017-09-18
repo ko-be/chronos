@@ -3,7 +3,8 @@ package org.apache.mesos.chronos.scheduler.graph
 import java.io.StringWriter
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Logger
-import javax.annotation.concurrent.ThreadSafe
+// from https://github.com/mesosphere/chronos/commit/b5c15f7c97ba1af436ea462136141a9f03cee5ef
+// import javax.annotation.concurrent.ThreadSafe
 
 import org.apache.mesos.chronos.scheduler.jobs.{BaseJob, DependencyBasedJob}
 import org.jgrapht.experimental.dag.DirectedAcyclicGraph
@@ -18,7 +19,7 @@ import scala.collection.mutable.ListBuffer
  * This class provides methods to access dependency structures of jobs.
  * @author Florian Leibert (flo@leibert.de)
  */
-@ThreadSafe
+// @ThreadSafe
 class JobGraph {
   val dag = new DirectedAcyclicGraph[String, DefaultEdge](classOf[DefaultEdge])
   val edgeInvocationCount = mutable.Map[DefaultEdge, Long]()
