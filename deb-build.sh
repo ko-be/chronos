@@ -11,10 +11,13 @@ set -e
 TARGETS=$1
 
 cd ~
-wget https://github.com/mesosphere/chronos-pkg/archive/master.zip
-unzip master.zip
+# wget https://github.com/mesosphere/chronos-pkg/archive/master.zip
+wget https://github.com/behanceops/chronos-pkg/archive/env-var-fix.zip
+# unzip master.zip
+unzip env-var-fix.zip
 # git clone https://github.com/mesosphere/chronos-pkg.git
-cd chronos-pkg-master
+# cd chronos-pkg-master
+cd chronos-pkg-env-var-fix
 rm -rf chronos
 ln -s /work chronos
 cd chronos
