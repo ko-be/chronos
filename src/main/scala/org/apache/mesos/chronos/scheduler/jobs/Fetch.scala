@@ -9,4 +9,4 @@ case class Fetch(
                   @JsonProperty uri: String,
                   @JsonProperty executable: Boolean = false,
                   @JsonProperty cache: Boolean = false,
-                  @JsonProperty extract: Boolean = false)
+                  @JsonProperty extract: Boolean = true)
